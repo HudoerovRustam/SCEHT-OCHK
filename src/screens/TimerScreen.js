@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 
 export default function TimerScreen({ navigation }) {
-  const [secondsLeft, setSecondsLeft] = useState(600); // 10 минут (10:00) по умолчанию
+  const [secondsLeft, setSecondsLeft] = useState(600); 
   const [isActive, setIsActive] = useState(false);
 
   useEffect(() => {
@@ -17,7 +17,7 @@ export default function TimerScreen({ navigation }) {
     return () => clearInterval(interval);
   }, [isActive, secondsLeft]);
 
-  // Форматирование секунд в вид ММ:СС
+
   const formatTime = (time) => {
     const minutes = Math.floor(time / 60);
     const seconds = time % 60;
@@ -26,37 +26,30 @@ export default function TimerScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Шапка */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backArrow}>❮</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Таймер</Text>
       </View>
-
-      {/* Большое табло со временем */}
       <View style={styles.timerDisplayContainer}>
         <Text style={styles.timerText}>{formatTime(secondsLeft)}</Text>
       </View>
 
-      {/* Набор цветных кнопок из Figma */}
       <View style={styles.buttonContainer}>
-        {/* Старт (Зеленая) */}
+
         <TouchableOpacity style={styles.startButton} onPress={() => setIsActive(true)}>
           <Text style={styles.buttonText}>▶️  Старт</Text>
         </TouchableOpacity>
 
-        {/* Пауза (Фиолетовая) */}
+
         <TouchableOpacity style={styles.pauseButton} onPress={() => setIsActive(false)}>
           <Text style={styles.buttonText}>⏸️  Пауза</Text>
         </TouchableOpacity>
 
-        {/* Сброс (Красная) */}
         <TouchableOpacity style={styles.resetButton} onPress={() => { setIsActive(false); setSecondsLeft(600); }}>
           <Text style={styles.buttonText}>🔄  Сброс</Text>
         </TouchableOpacity>
-
-        {/* Назад к счёту (Серая) */}
         <TouchableOpacity style={styles.backToGameButton} onPress={() => navigation.goBack()}>
           <Text style={styles.buttonText}>↩️  Назад к счёту</Text>
         </TouchableOpacity>

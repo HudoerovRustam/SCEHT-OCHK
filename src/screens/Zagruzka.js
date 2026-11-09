@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
-import { colors } from '../constants/constant';
-
-// Импортируем компоненты из вашего UI-Kit
+import { colors } from '../constants/constant'
 import AppInput from '../components/AppInput';
 import AppButton from '../components/AppButton';
 
@@ -21,8 +19,6 @@ export default function LoginScreen({ navigation }) {
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
         <View style={styles.formContainer}>
-          
-          {/* Иконка/логотип */}
           <View style={styles.imagePlaceholder}>
             <Text style={{ fontSize: 80 }}>🎲</Text>
           </View>

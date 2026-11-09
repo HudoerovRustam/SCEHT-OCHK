@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 
 export default function RollDiceScreen({ navigation }) {
-  const [diceResult, setDiceResult] = useState(5); // Начальное значение как на скрине
+  const [diceResult, setDiceResult] = useState(5);
 
-  // Функция для броска кубика (случайное число от 1 до 6)
   const rollDice = () => {
     const result = Math.floor(Math.random() * 6) + 1;
     setDiceResult(result);
@@ -12,7 +11,6 @@ export default function RollDiceScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Шапка */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backArrow}>❮</Text>
@@ -20,23 +18,19 @@ export default function RollDiceScreen({ navigation }) {
         <Text style={styles.headerTitle}>Бросок кубика</Text>
       </View>
 
-      {/* Интерактивная 3D-модель или картинка кубика в центре */}
       <View style={styles.diceContainer}>
         <Text style={styles.diceVisual}>🎲</Text>
       </View>
 
-      {/* Фиолетовая кнопка "Бросить кубика" */}
       <TouchableOpacity style={styles.primaryButton} onPress={rollDice}>
         <Text style={styles.buttonText}>Бросить кубик</Text>
       </TouchableOpacity>
 
-      {/* Окно вывода результата */}
       <View style={styles.resultContainer}>
         <Text style={styles.resultLabel}>Результат</Text>
         <Text style={styles.resultValue}>{diceResult}</Text>
       </View>
 
-      {/* Нижние кнопки */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.outlineButton} onPress={rollDice}>
           <Text style={styles.outlineButtonText}>🔄  Еще раз</Text>

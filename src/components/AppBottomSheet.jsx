@@ -16,15 +16,12 @@ export default function AppBottomSheet({
       transparent={true}
       onRequestClose={onClose}
     >
-      {/* Кликер по заднему фону (Backdrop) для закрытия */}
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.backdrop}>
           
-          {/* Контейнер самой шторки (чтобы клики внутри неё не закрывали модалку) */}
           <TouchableWithoutFeedback>
             <View style={styles.sheetContainer}>
               
-              {/* Шапка модалки */}
               <View style={styles.header}>
                 <View style={styles.swipeIndicator} />
                 
@@ -36,7 +33,6 @@ export default function AppBottomSheet({
                 </View>
               </View>
 
-              {/* Контентная область */}
               <View style={styles.content}>
                 {children}
               </View>
@@ -53,7 +49,7 @@ export default function AppBottomSheet({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Анимированное затемнение 50%
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', 
     justifyContent: 'flex-end',
   },
   sheetContainer: {

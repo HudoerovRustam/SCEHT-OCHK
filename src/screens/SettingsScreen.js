@@ -3,20 +3,17 @@ import { StyleSheet, Text, View, Switch, ScrollView, Alert } from 'react-native'
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { colors } from '../constants/constant';
 
-// Импортируем компоненты UI-Kit
 import AppCard from '../components/Card';
 import AppInput from '../components/AppInput';
 import AppButton from '../components/AppButton';
 
 export default function SettingsScreen() {
-  // Стейты для настроек игры
   const [maxPoints, setMaxPoints] = useState('50');
   const [diceCount, setDiceCount] = useState('1');
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [vibrationEnabled, setVibrationEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  // Валидация и сохранение настроек
   const handleSaveSettings = () => {
     const points = parseInt(maxPoints, 10);
     const dice = parseInt(diceCount, 10);
@@ -33,7 +30,6 @@ export default function SettingsScreen() {
 
     setLoading(true);
 
-    // Имитация сохранения в базу данных или AsyncStorage
     setTimeout(() => {
       setLoading(false);
       Alert.alert('Успешно', 'Настройки успешно сохранены!');
@@ -44,15 +40,12 @@ export default function SettingsScreen() {
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
         
-        {/* Шапка экрана */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Настройки</Text>
           <Text style={styles.headerSubtitle}>Конфигурация игрового процесса</Text>
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          
-          {/* Блок 1: Игровые правила */}
           <Text style={styles.sectionTitle}>Правила игры</Text>
           <AppCard style={styles.cardMargin}>
             <AppInput
@@ -71,10 +64,8 @@ export default function SettingsScreen() {
             />
           </AppCard>
 
-          {/* Блок 2: Эффекты и кастомизация */}
           <Text style={styles.sectionTitle}>Системные параметры</Text>
           <AppCard style={styles.cardMargin}>
-            {/* Переключатель Звука */}
             <View style={styles.settingRow}>
               <View>
                 <Text style={styles.settingLabel}>Звуковые эффекты</Text>
@@ -88,10 +79,8 @@ export default function SettingsScreen() {
               />
             </View>
 
-            {/* Разделитель */}
             <View style={styles.divider} />
 
-            {/* Переключатель Вибрации */}
             <View style={styles.settingRow}>
               <View>
                 <Text style={styles.settingLabel}>Вибрация (Haptic)</Text>

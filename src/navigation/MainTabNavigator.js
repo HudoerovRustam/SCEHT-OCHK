@@ -2,18 +2,16 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 
-// Импортируем три основных экрана для нижнего меню
 import HomeScreen from '../screens/HomeScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 
 const Tab = createBottomTabNavigator();
 
-// Системные цвета из вашего ТЗ
 const colors = {
-  PRIMARY: '#6C47FF',     // Фиолетовый
-  TEXT_MUTED: '#6B7280',  // Серый неактивный
-  TAB_BG: '#D1D5DB',      // Светлый фон панели из Figma
+  PRIMARY: '#6C47FF',     
+  TEXT_MUTED: '#6B7280',  
+  TAB_BG: '#D1D5DB',      
 };
 
 export default function MainTabNavigator() {
@@ -25,7 +23,7 @@ export default function MainTabNavigator() {
         tabBarInactiveTintColor: colors.TEXT_MUTED,
         tabBarStyle: {
           backgroundColor: colors.TAB_BG,
-          height: 64, // Высота панели по ТЗ
+          height: 64,
           borderTopWidth: 0,
           paddingBottom: 8,
           paddingTop: 8,

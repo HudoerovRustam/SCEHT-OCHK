@@ -32,7 +32,7 @@ const styles = StyleSheet.create({
   badge: {
     paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 100, // Pill-shape
+    borderRadius: 100,
     alignSelf: 'flex-start',
     justifyContent: 'center',
     alignItems: 'center',

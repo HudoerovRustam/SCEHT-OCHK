@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity } from 'react-native'; 
+import { useGameStore } from '../store/gameStore';
+const { setPlayersCount } = useGameStore();
+setPlayersCount(playersCount + 1);
+setPlayersCount(playersCount - 1);
 
 export default function NewGameScreen({ navigation }) {
   const [gameName, setGameName] = useState('');
@@ -9,7 +13,6 @@ export default function NewGameScreen({ navigation }) {
   return (
     <View style={styles.container}>
       
-      {/* Шапка со стрелкой Назад */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backArrow}>❮</Text>
@@ -18,7 +21,6 @@ export default function NewGameScreen({ navigation }) {
       </View>
 
       <View style={styles.content}>
-        {/* Поле Название игры */}
         <Text style={styles.label}>Название игры</Text>
         <TextInput 
           style={styles.input} 
@@ -28,7 +30,6 @@ export default function NewGameScreen({ navigation }) {
           onChangeText={setGameName}
         />
 
-        {/* Количество игроков */}
         <Text style={styles.label}>Количество игроков</Text>
         <View style={styles.counterContainer}>
           <TouchableOpacity 
@@ -46,7 +47,6 @@ export default function NewGameScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        {/* Режим подсчёта */}
         <Text style={styles.label}>Режим подсчёта</Text>
         <View style={styles.radioContainer}>
           <TouchableOpacity 
@@ -66,7 +66,6 @@ export default function NewGameScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        {/* Кнопка Продолжить */}
         <TouchableOpacity 
           style={styles.submitButton}
           onPress={() => navigation.navigate('Players', { playersCount, isTimerMode })}

@@ -1,28 +1,14 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, FlatList } from 'react-native';
+import { useGameStore } from '../store/gameStore';
 
-export default function GameScreen({ route, navigation }) {
+export default function GameScreen({ navigation }) {
 
-  const { playersList } = route.params || { playersList: [
-    { id: '1', name: 'Игрок 1', avatar: '🏃' },
-    { id: '2', name: 'Игрок 2', avatar: '🎯' },
-    { id: '3', name: 'Игрок 3', avatar: '🎲' },
-    { id: '4', name: 'Игрок 4', avatar: '🐷' },
-  ]};
-
-  const [scores, setScores] = useState(
-    playersList.reduce((acc, player) => ({ ...acc, [player.id]: 0 }), {})
-  );
-
-  const changeScore = (id, amount) => {
-    setScores(prev => ({
-      ...prev,
-      [id]: Math.max(0, prev[id] + amount)   
-    }));
-  };
+  const { activePlayers, changeActiveScore } = useGameStore();
 
   return (
     <View style={styles.container}>
+
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backArrow}>❮</Text>
@@ -34,8 +20,9 @@ export default function GameScreen({ route, navigation }) {
         <Text style={styles.timerText}>⏱️  00:15:00</Text>
       </TouchableOpacity>
 
+
       <FlatList
-        data={playersList}
+        data={activePlayers}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View style={styles.playerCard}>
@@ -43,15 +30,15 @@ export default function GameScreen({ route, navigation }) {
               <Text style={styles.avatar}>{item.avatar}</Text>
               <View>
                 <Text style={styles.playerName}>{item.name}</Text>
-                <Text style={styles.playerScore}>{scores[item.id]}</Text>
+                <Text style={styles.playerScore}>{item.score}</Text>
               </View>
             </View>
-        ф
+            
             <View style={styles.controls}>
-              <TouchableOpacity style={styles.plusButton} onPress={() => changeScore(item.id, 1)}>
+              <TouchableOpacity style={styles.plusButton} onPress={() => changeActiveScore(item.id, 1)}>
                 <Text style={styles.controlText}>+</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.minusButton} onPress={() => changeScore(item.id, -1)}>
+              <TouchableOpacity style={styles.minusButton} onPress={() => changeActiveScore(item.id, -1)}>
                 <Text style={styles.controlText}>−</Text>
               </TouchableOpacity>
             </View>
@@ -60,17 +47,11 @@ export default function GameScreen({ route, navigation }) {
       />
 
       <View style={styles.footer}>
-        <TouchableOpacity 
-          style={styles.diceButton}
-          onPress={() => navigation.navigate('RollDice')}
-        >
+        <TouchableOpacity style={styles.diceButton} onPress={() => navigation.navigate('RollDice')}>
           <Text style={styles.buttonText}>🎲  Бросить кубик</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.finishButton}
-          onPress={() => navigation.navigate('Finish')}
-        >
+        <TouchableOpacity style={styles.finishButton} onPress={() => navigation.navigate('Finish')}>
           <Text style={styles.buttonText}>🏁  Завершить игру</Text>
         </TouchableOpacity>
       </View>

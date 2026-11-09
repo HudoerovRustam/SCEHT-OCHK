@@ -8,11 +8,8 @@ export default function HomeScreen({ navigation }) {
         <Text style={{ fontSize: 80 }}>🎲</Text> 
       </View>
 
-      {/* Название приложения */}
       <Text style={styles.titleText}>Игро Счёт</Text>
       <Text style={styles.subtitleText}>Готовы сыграть?</Text>
-      
-      {/* Кнопка "Новая игра" */}
       <TouchableOpacity 
         style={styles.primaryButton} 
         onPress={() => navigation.navigate('NewGame')}
@@ -21,7 +18,7 @@ export default function HomeScreen({ navigation }) {
       </TouchableOpacity>
 <TouchableOpacity 
   style={styles.secondaryButton} 
-  onPress={() => navigation.navigate('История')} //  ИСПРАВЛЕНО
+  onPress={() => navigation.navigate('История')} 
 >
   <Text style={styles.buttonText}>🕒  История игр</Text>
 </TouchableOpacity>
@@ -34,7 +31,7 @@ export default function HomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1C1E22', // Тёмный фон из Figma
+    backgroundColor: '#1C1E22', 
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -53,7 +50,7 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   primaryButton: {
-    backgroundColor: '#6C47FF', // Фиолетовый цвет кнопок
+    backgroundColor: '#6C47FF', 
     paddingVertical: 16,
     borderRadius: 14,
     width: '85%',
@@ -61,7 +58,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   secondaryButton: {
-    backgroundColor: '#262930', // Тёмно-серая кнопка истории
+    backgroundColor: '#262930',
     paddingVertical: 16,
     borderRadius: 14,
     width: '85%',
