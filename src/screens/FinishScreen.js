@@ -1,202 +1,118 @@
 import React from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView } from 'react-native';
-import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import { useGameStore } from '../store/gameStore';
 
-const initialPlayers = [
-  { id: '1', name: 'Игрок 1', score: 25, avatar: 'https://cdn-icons-png.flaticon.com/256/7853/7853210.png' },
-  { id: '2', name: 'Игрок 2', score: 18, avatar: 'https://www.futbox.com/img/v1/a5b/b1a/816/cd2/c10b83a9a4fb7e382dfa_zoom.png' },
-  { id: '3', name: 'Игрок 3', score: 32, avatar: 'https://avatars.mds.yandex.net/i?id=3009e6c3e2d59f22dcc6369d7c80d505f8c41135-5869063-images-thumbs&n=13' },
-  { id: '4', name: 'Игрок 4', score: 20, avatar: 'https://static.tildacdn.info/tild6632-6139-4    136-b336-393565393332/tumblr_pfhftpiSxG1xh.gif' },
-];
+export default function FinishScreen({ navigation }) {
+  // Достаем актуальный список игроков из нашего глобального JS-стора
+  const store = useGameStore();
+  const players = store?.activePlayers || [];
 
-export default function FinishScreen() {
+  // Автоматический подсчет победителя: копируем массив и сортируем его по убыванию очков (score)
+  const sortedPlayers = [...players].sort((a, b) => (b.score || 0) - (a.score || 0));
+  
+  // Победитель — первый в отсортированном списке. Если очков поровну или список пуст, даем дефолт
+  const winnerName = sortedPlayers.length > 0 ? sortedPlayers[0].name : 'Игрок 3';
+  const maxScore = sortedPlayers.length > 0 ? sortedPlayers[0].score : 0;
 
-  const winner = initialPlayers.reduce((max, player) => (player.score > max.score ? player : max), initialPlayers[0]);
+  const handleGoHome = () => {
+    // Автоматически сохраняем сыгранную партию в историю (экшен из стора)
+    if (store && typeof store.addGame === 'function') {
+      store.addGame({
+        title: `Партия #${Date.now().toString().slice(-4)}`,
+        winner: winnerName
+      });
+    }
+    
+    // Сбрасываем стейт очков перед следующими играми
+    if (store && typeof store.resetActiveScores === 'function') {
+      store.resetActiveScores();
+    }
+    
+    // Возвращаемся в самое главное меню
+    navigation.navigate('MainTabs');
+  };
+
+  const handleNewGame = () => {
+    // Сохраняем эту партию в историю перед сбросом
+    if (store && typeof store.addGame === 'function') {
+      store.addGame({ winner: winnerName });
+    }
+    
+    // Сбрасываем очки
+    if (store && typeof store.resetActiveScores === 'function') {
+      store.resetActiveScores();
+    }
+    
+    // Идем сразу на экран настройки новой игры
+    navigation.navigate('NewGame');
+  };
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.container}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+    <View style={styles.container}>
+      
+      <Text style={styles.headerTitle}>Игра завершена!</Text>
+
+      {/* Зеленая плашка ПОБЕДИТЕЛЯ (считается автоматически) */}
+      <View style={styles.winnerCard}>
+        <Text style={styles.winnerLabel}>ПОБЕДИТЕЛЬ</Text>
+        <Text style={styles.winnerName}>{winnerName}</Text>
+      </View>
+
+      <Text style={styles.resultsLabel}>Итоговые результаты:</Text>
+
+      {/* Интерактивный список итоговых результатов */}
+      <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+        {sortedPlayers.map((item) => {
+          // Если у игрока столько же очков, сколько у лидера (и это не 0), вешаем ему корону
+          const isWinner = item.score === maxScore && maxScore > 0;
           
-          <View style={styles.topBar}>
-            <TouchableOpacity style={styles.settingsButton}>
-              <Text style={styles.settingsIcon}>⚙️</Text>
-            </TouchableOpacity>
-          </View>
+          return (
+            <View key={item.id} style={styles.playerRow}>
+              <View style={styles.playerInfo}>
+                <Text style={styles.avatar}>{item.avatar || '👤'}</Text>
+                <Text style={styles.playerName}>{item.name}</Text>
+              </View>
+              <Text style={styles.playerScore}>
+                {item.score || 0} {isWinner ? '👑' : ''}
+              </Text>
+            </View>
+          );
+        })}
+      </ScrollView>
 
-          <Text style={styles.titleText}>Игра завершена!</Text>
+      {/* Нижние кнопки навигации */}
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.primaryButton} onPress={handleNewGame}>
+          <Text style={styles.buttonText}>Новая игра</Text>
+        </TouchableOpacity>
 
-          <View style={styles.winnerCard}>
-            <Text style={styles.winnerLabel}>ПОБЕДИТЕЛЬ</Text>
-            <Text style={styles.winnerName}>{winner.name}</Text>
-          </View>
+        <TouchableOpacity style={styles.secondaryButton} onPress={handleGoHome}>
+          <Text style={styles.buttonText}>На главную</Text>
+        </TouchableOpacity>
+      </View>
 
-          <View style={styles.resultsContainer}>
-            <Text style={styles.resultsTitle}>Итоговые результаты:</Text>
-            
-            {initialPlayers.map((player) => {
-              const isWinner = player.id === winner.id;
-              
-              return (
-                <View key={player.id} style={styles.playerRow}>
-                  <View style={styles.playerInfo}>
-                    <Image 
-                      source={{ uri: player.avatar }} 
-                      style={styles.avatar} 
-                    />
-                    <Text style={styles.playerName}>{player.name}</Text>
-                  </View>
-                  
-                  <View style={styles.scoreContainer}>
-                    <Text style={styles.playerScore}>{player.score}</Text>
-                    {isWinner && <Text style={styles.crownIcon}>👑</Text>}
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity style={[styles.button, styles.primaryButton]}>
-              <Text style={styles.buttonText}>Новая игра</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={[styles.button, styles.secondaryButton]}>
-              <Text style={styles.buttonText}>На главную</Text>
-            </TouchableOpacity>
-          </View>
-
-        </ScrollView>
-      </SafeAreaView>
-    </SafeAreaProvider>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#12161A', 
-  },
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-  },
-  topBar: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 10,
-  },
-  settingsButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#222831',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  settingsIcon: {
-    fontSize: 18,
-    color: '#FFFFFF',
-  },
-  titleText: {
-    color: '#FFFFFF',
-    fontSize: 26,
-    fontWeight: '900',
-    textAlign: 'center',
-    marginTop: 30,
-    marginBottom: 20,
-  },
-  winnerCard: {
-    width: '100%',
-    backgroundColor: '#0F541C', 
-    borderRadius: 18,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginBottom: 35,
-  },
-  winnerLabel: {
-    color: '#A17028', 
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  winnerName: {
-    color: '#2CE134', 
-    fontSize: 30,
-    fontWeight: '900',
-  },
-  resultsContainer: {
-    width: '100%',
-    marginBottom: 30,
-  },
-  resultsTitle: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 14,
-  },
-  playerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#1A2026', 
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    marginBottom: 10,
-  },
-  playerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 36,               
-    height: 36,              
-    borderRadius: 8,         
-    backgroundColor: '#323B44', 
-    marginRight: 14,
-  },
-  playerName: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  scoreContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  playerScore: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  crownIcon: {
-    fontSize: 16,
-    marginLeft: 6,
-  },
-  buttonContainer: {
-    width: '100%',
-    gap: 12,
-    marginTop: 'auto', 
-  },
-  button: {
-    width: '100%',
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  primaryButton: {
-    backgroundColor: '#5A31F4', 
-  },
-  secondaryButton: {
-    backgroundColor: '#29313C', 
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
-  },
+  container: { flex: 1, backgroundColor: '#1C1E22', paddingTop: 60, paddingHorizontal: 20 },
+  headerTitle: { color: '#ffffff', fontSize: 32, fontWeight: 'bold', textAlign: 'center', marginBottom: 25 },
+  
+  winnerCard: { backgroundColor: '#14532D', borderRadius: 16, paddingVertical: 20, alignItems: 'center', marginBottom: 30, borderWidth: 1, borderColor: '#166534' },
+  winnerLabel: { color: '#CA8A04', fontSize: 14, fontWeight: 'bold', letterSpacing: 1, marginBottom: 4 },
+  winnerName: { color: '#22C55E', fontSize: 36, fontWeight: 'bold' },
+  
+  resultsLabel: { color: '#A0A5B0', fontSize: 16, fontWeight: '600', marginBottom: 15 },
+  list: { paddingBottom: 20 },
+  playerRow: { flexDirection: 'row', backgroundColor: '#262930', borderRadius: 14, padding: 16, alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  playerInfo: { flexDirection: 'row', alignItems: 'center' },
+  avatar: { fontSize: 24, marginRight: 15 },
+  playerName: { color: '#ffffff', fontSize: 18, fontWeight: '500' },
+  playerScore: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' },
+  
+  footer: { marginBottom: 35, gap: 12 },
+  primaryButton: { backgroundColor: '#6C47FF', paddingVertical: 16, borderRadius: 14, alignItems: 'center' },
+  secondaryButton: { backgroundColor: '#262930', paddingVertical: 16, borderRadius: 14, alignItems: 'center', borderWidth: 1, borderColor: '#374151' },
+  buttonText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' }
 });
