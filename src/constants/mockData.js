@@ -8,8 +8,13 @@ export const MOCK_GAMES = Array.from({ length: 35 }, (_, index) => {
     { id: '2', name: 'Игрок 2', avatar: '🎯', score: Math.floor(Math.random() * 50) + 10 },
     { id: '3', name: 'Игрок 3', avatar: '🎲', score: Math.floor(Math.random() * 50) + 10 },
     { id: '4', name: 'Игрок 4', avatar: '🐷', score: Math.floor(Math.random() * 50) + 10 },
-  ];
+    { id: '5', name: 'Игрок 5', avatar: '🦄', score: Math.floor(Math.random() * 50) + 10 },
+    { id: '6', name: 'Игрок 6', avatar: '🦁', score: Math.floor(Math.random() * 50) + 10 },
+    { id: '7', name: 'Игрок 7', avatar: '🦊', score: Math.floor(Math.random() * 50) + 10 },
+    { id: '8', name: 'Игрок 8', avatar: '👤', score: Math.floor(Math.random() * 50) + 10 },
 
+
+  ];
   const winner = [...players].sort((a, b) => b.score - a.score)[0].name;
 
   return {

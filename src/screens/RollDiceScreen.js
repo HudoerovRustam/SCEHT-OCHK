@@ -8,7 +8,6 @@ export default function RollDiceScreen({ navigation }) {
     const result = Math.floor(Math.random() * 6) + 1;
     setDiceResult(result);
   };
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -58,7 +57,7 @@ const styles = StyleSheet.create({
   resultLabel: { color: '#ffffff', fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
   resultValue: { color: '#6C47FF', fontSize: 36, fontWeight: 'bold' },
   footer: { gap: 12, marginBottom: 30 },
-  outlineButton: { border豎Width: 2, borderColor: '#374151', backgroundColor: '#262930', paddingVertical: 14, borderRadius: 14, alignItems: 'center' },
+  outlineButton: { borderWidth: 2, borderColor: '#374151', backgroundColor: '#262930', paddingVertical: 14, borderRadius: 14, alignItems: 'center' },
   outlineButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '600' }
 });
   

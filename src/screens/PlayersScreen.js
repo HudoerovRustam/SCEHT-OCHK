@@ -5,18 +5,19 @@ import { useGameStore } from '../store/gameStore';
 export default function PlayersScreen({ navigation }) {
   const store = useGameStore();
 
-  // Локальный стейт для инпута
   const [playerName, setPlayerName] = useState('');
-  
-  // Локальный стейт списка игроков
+
   const [localPlayers, setLocalPlayers] = useState([
     { id: '1', name: 'Игрок 1', avatar: '🏃' },
     { id: '2', name: 'Игрок 2', avatar: '🎯' },
     { id: '3', name: 'Игрок 3', avatar: '🎲' },
     { id: '4', name: 'Игрок 4', avatar: '🐷' },
+    { id: '5', name: 'Игрок 5', avatar: '🦄'},
+    { id: '6', name: 'Игрок 6', avatar: '🦁'},
+    { id: '7', name: 'Игрок 7', avatar: '🦊'},
+    { id: '8', name: 'Игрок 8', avatar: '🐱'},
   ]);
 
-  // Функция добавления игрока (работает напрямую с локальным стейтом)
   const handleAddPlayer = () => {
     if (!playerName || playerName.trim() === '') return;
 
@@ -28,16 +29,15 @@ export default function PlayersScreen({ navigation }) {
     };
 
     setLocalPlayers([...localPlayers, newPlayer]);
-    setPlayerName(''); // Очищаем поле ввода
-    Keyboard.dismiss(); // Прячем клавиатуру
+    setPlayerName(''); 
+    Keyboard.dismiss();
   };
 
-  // Функция удаления игрока
+
   const handleRemovePlayer = (id) => {
     setLocalPlayers(prev => prev.filter(p => p.id !== id));
   };
 
-  // Переход к игре с сохранением финального списка в глобальный стор
   const handleStartGame = () => {
     if (store) {
       store.activePlayers = [...localPlayers];
@@ -51,7 +51,6 @@ export default function PlayersScreen({ navigation }) {
   return (
     <View style={styles.container}>
       
-      {/* Шапка — ТЕПЕРЬ ТУТ ЧИСТО, НЕТ НИКАКИХ ШЕСТЕРЁНОК */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backArrow}>❮</Text>
@@ -59,7 +58,6 @@ export default function PlayersScreen({ navigation }) {
         <Text style={styles.headerTitle}>Игроки</Text>
       </View>
 
-      {/* Поле ввода и кнопка плюс */}
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
@@ -72,8 +70,6 @@ export default function PlayersScreen({ navigation }) {
           <Text style={styles.addButtonText}>+</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Список участников */}
       <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
         {localPlayers.map((item) => (
           <View key={item.id} style={styles.playerRow}>
@@ -87,8 +83,6 @@ export default function PlayersScreen({ navigation }) {
           </View>
         ))}
       </ScrollView>
-
-      {/* Кнопка Старт */}
       <TouchableOpacity style={styles.startButton} onPress={handleStartGame}>
         <Text style={styles.startButtonText}>Начать игру</Text>
       </TouchableOpacity>
@@ -112,7 +106,7 @@ const styles = StyleSheet.create({
   playerInfo: { flexDirection: 'row', alignItems: 'center' },
   avatar: { fontSize: 24, marginRight: 15 },
   playerName: { color: '#ffffff', fontSize: 18, fontWeight: '500' },
-  deleteButton: { backgroundColor: '#EF4444', width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  deleteButton: { backgroundColor: '#fdfcfc', width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   deleteButtonText: { color: '#ffffff', fontSize: 12, fontWeight: 'bold' },
   startButton: { backgroundColor: '#6C47FF', paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginBottom: 30 },
   startButtonText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' }

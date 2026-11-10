@@ -4,10 +4,9 @@ import { useGameStore } from '../store/gameStore';
 
 export default function NewGameScreen({ navigation }) {
   const [gameName, setGameName] = useState('');
-  const [localCount, setLocalCount] = useState(4); // Локальный стейт для счетчика
+  const [localCount, setLocalCount] = useState(4);
   const [isTimerMode, setIsTimerMode] = useState(false);
 
-  // Безопасно достаем экшен из нашего стора
   const store = useGameStore();
   const setPlayersCount = store.setPlayersCount;
 
@@ -31,7 +30,6 @@ export default function NewGameScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Шапка со стрелкой Назад */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backArrow}>❮</Text>
@@ -40,7 +38,7 @@ export default function NewGameScreen({ navigation }) {
       </View>
 
       <View style={styles.content}>
-        {/* Поле Название игры */}
+
         <Text style={styles.label}>Название игры</Text>
         <TextInput 
           style={styles.input} 
@@ -50,7 +48,6 @@ export default function NewGameScreen({ navigation }) {
           onChangeText={setGameName}
         />
 
-        {/* Количество игроков */}
         <Text style={styles.label}>Количество игроков</Text>
         <View style={styles.counterContainer}>
           <TouchableOpacity style={styles.counterButton} onPress={handleMinus}>
@@ -76,7 +73,6 @@ export default function NewGameScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        {/* Кнопка Продолжить */}
         <TouchableOpacity 
           style={styles.submitButton}
           onPress={() => navigation.navigate('Players', { playersCount: localCount, isTimerMode })}

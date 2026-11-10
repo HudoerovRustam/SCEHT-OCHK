@@ -22,7 +22,6 @@ const MOCK_GAMES = Array.from({ length: 35 }, (_, index) => {
   };
 });
 
-// Глобальный чистый JS-объект
 const globalStore = {
   user: { id: 'u_1', name: 'Разработчик', avatar: '👑' },
   games: MOCK_GAMES,
@@ -33,6 +32,10 @@ const globalStore = {
     { id: '2', name: 'Игрок 2', avatar: '🎯', score: 0 },
     { id: '3', name: 'Игрок 3', avatar: '🎲', score: 0 },
     { id: '4', name: 'Игрок 4', avatar: '🐷', score: 0 },
+    { id: '5', name: 'Игрок 5', avatar: '🦄', score: 0},
+    { id: '6', name: 'Игрок 6', avatar: '🦁', score: 0},
+    { id: '7', name: 'Игрок 7', avatar: '🦊', score: 0},
+    { id: '8', name: 'Игрок 8', avatar: '🐱', score: 0},
   ],
 
   setPlayersCount: (count) => {
@@ -44,10 +47,9 @@ const globalStore = {
       score: 0
     }));
   },
-
-  // ИСПРАВЛЕНО: Создаем новую ссылку на массив через оператор спреда
   addActivePlayer: (name) => {
     const avatars = ['🏃', '🎯', '🎲', '🐷', '👤'];
+    
     const newPlayer = {
       id: Date.now().toString(),
       name: name,
@@ -56,8 +58,6 @@ const globalStore = {
     };
     globalStore.activePlayers = [...globalStore.activePlayers, newPlayer];
   },
-
-  // ИСПРАВЛЕНО
   removeActivePlayer: (id) => {
     globalStore.activePlayers = globalStore.activePlayers.filter(p => p.id !== id);
   },
@@ -75,8 +75,6 @@ const globalStore = {
   fetchGames: async () => {
     return new Promise((resolve) => setTimeout(resolve, 100));
   },
-
-  // ИСПРАВЛЕНО
   addGame: (newGame) => {
     const freshGame = {
       id: Date.now().toString(),
