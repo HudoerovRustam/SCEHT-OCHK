@@ -1,31 +1,17 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity } from 'react-native';
-import { useGameStore } from '../store/gameStore';
 
 export default function NewGameScreen({ navigation }) {
   const [gameName, setGameName] = useState('');
   const [localCount, setLocalCount] = useState(4);
   const [isTimerMode, setIsTimerMode] = useState(false);
 
-  const store = useGameStore();
-  const setPlayersCount = store.setPlayersCount;
-
   const handleMinus = () => {
-    if (localCount > 1) {
-      const nextCount = localCount - 1;
-      setLocalCount(nextCount);
-      if (typeof setPlayersCount === 'function') {
-        setPlayersCount(nextCount);
-      }
-    }
+    if (localCount > 1) setLocalCount(localCount - 1);
   };
 
   const handlePlus = () => {
-    const nextCount = localCount + 1;
-    setLocalCount(nextCount);
-    if (typeof setPlayersCount === 'function') {
-      setPlayersCount(nextCount);
-    }
+    setLocalCount(localCount + 1);
   };
 
   return (
@@ -38,11 +24,10 @@ export default function NewGameScreen({ navigation }) {
       </View>
 
       <View style={styles.content}>
-
         <Text style={styles.label}>Название игры</Text>
         <TextInput 
           style={styles.input} 
-          placeholder="Например: Игра" 
+          placeholder="Например: Монополия" 
           placeholderTextColor="#6B7280"
           value={gameName}
           onChangeText={setGameName}
@@ -59,7 +44,6 @@ export default function NewGameScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        {/* Режим подсчёта */}
         <Text style={styles.label}>Режим подсчёта</Text>
         <View style={styles.radioContainer}>
           <TouchableOpacity style={styles.radioButton} onPress={() => setIsTimerMode(false)}>
@@ -75,7 +59,11 @@ export default function NewGameScreen({ navigation }) {
 
         <TouchableOpacity 
           style={styles.submitButton}
-          onPress={() => navigation.navigate('Players', { playersCount: localCount, isTimerMode })}
+          onPress={() => navigation.navigate('Players', { 
+            playersCount: localCount, 
+            isTimerMode,
+            gameName: gameName.trim() || 'Игра'
+          })}
         >
           <Text style={styles.submitButtonText}>Продолжить</Text>
         </TouchableOpacity>
