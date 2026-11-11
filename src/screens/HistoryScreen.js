@@ -1,50 +1,79 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, FlatList, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { API_CONFIG } from '../services/api.js';
 
 export default function HistoryScreen() {
-  // Задача 1: Внедряем три обязательных базовых состояния
-  const [networkGames, setNetworkGames] = useState([]); // data
-  const [isLoading, setIsLoading] = useState(true);     // isLoading
-  const [error, setError] = useState(null);             // error
+  // Три обязательных состояния данных
+  const [networkGames, setNetworkGames] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    // Задача 3: Оборачиваем асинхронный вызов в блок try...catch...finally
-    const loadData = async () => {
-      try {
-        const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.GAMES_LIST}`);
-        
-        if (!response.ok) {
-          throw new Error(`Ошибка сервера: ${response.status}`);
-        }
+  // Задача 1: Состояние для паттерна Pull-to-Refresh
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-        const json = await response.json();
-        
-        // Базовая валидация: проверяем, что пришел массив
-        if (Array.isArray(json)) {
-          const mappedGames = json.map(item => ({
-            id: item.id.toString(),
-            title: `Партия #${item.id}`,
-            date: '11.11.2026',
-            winner: item.completed ? 'Игрок 1 (Победа)' : 'Ничья',
-            status: item.completed ? 'Finished' : 'In Progress'
-          }));
-          setNetworkGames(mappedGames);
-        }
-      } catch (err) {
-        console.log('[Спринт 2] Перехвачена ошибка:', err.message);
-        // Задача 2 (Сбой): Выводим текст ошибки вместо падения приложения
-        setError('Не удалось загрузить данные. Проверьте интернет-соединение.');
-      } finally {
-        // Критерий 3 (DoD): Блок finally гарантированно выключает спиннер загрузки при любом исходе
-        setIsLoading(false);
+  // Основная функция загрузки данных (поддерживает AbortSignal для предотвращения утечек памяти)
+  const loadData = async (signal = null, fromRefresh = false) => {
+    if (fromRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
+    setError(null);
+
+    try {
+      // Передаем signal в fetch, чтобы иметь возможность отменить запрос
+      const response = await fetch(
+        `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.GAMES_LIST}`,
+        { signal }
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Ошибка сервера: ${response.status}`);
       }
-    };
 
-    loadData();
+      const json = await response.json();
+      
+      if (Array.isArray(json)) {
+        const mappedGames = json.map(item => ({
+          id: item.id.toString(),
+          title: `Партия #${item.id}`,
+          date: '11.11.2026',
+          winner: item.completed ? 'Игрок 1 (Победа)' : 'Ничья',
+          status: item.completed ? 'Finished' : 'In Progress'
+        }));
+        setNetworkGames(mappedGames);
+      }
+    } catch (err) {
+      // Игнорируем ошибку отмены, если компонент просто размонтировался
+      if (err.name !== 'AbortError') {
+        setError('Не удалось загрузить данные. Проверьте интернет-соединение.');
+      }
+    } finally {
+      // Гарантированно выключаем оба спиннера в блоке finally
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  // Задача 2: Предотвращение утечек памяти (Memory Leaks) через cleanup-функцию
+  useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    loadData(signal, false);
+
+    // Возвращаем cleanup-функцию, которая сработает при уходе с экрана
+    return () => {
+      controller.abort(); // Отменяем текущий fetch-запрос, спасая память
+    };
   }, []);
 
-  // Уровень А: Если isLoading === true, рендерим спиннер по центру экрана
+  // Обработчик жеста Pull-to-Refresh
+  const handleRefresh = () => {
+    loadData(null, true);
+  };
+
+  // Условный рендеринг: Ожидание первичной загрузки
   if (isLoading) {
     return (
       <View style={styles.center}>
@@ -54,7 +83,7 @@ export default function HistoryScreen() {
     );
   }
 
-  // Уровень А: При ошибке — вывод текста ошибки стандартным компонентом <Text>
+  // Условный рендеринг: Вывод ошибки через стандартный <Text>
   if (error) {
     return (
       <View style={styles.center}>
@@ -78,7 +107,15 @@ export default function HistoryScreen() {
             <Text style={styles.gameStatus}>Статус: {item.status}</Text>
           </View>
         )}
-        // Задача 2 (Пустой ответ): Плашка ListEmptyComponent во FlatList, если массив пустой []
+        // Задача 1: Интеграция компонента RefreshControl во FlatList
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor="#6C47FF" // Цвет крутилки на iOS
+            colors={['#6C47FF']} // Цвет крутилки на Android
+          />
+        }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>История игр пуста.</Text>
