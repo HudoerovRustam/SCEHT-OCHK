@@ -1,0 +1,12 @@
+{
+  "games": [
+    {
+      "id": "1",
+      "title": "Партия #1",
+      "winner": "Игрок 3",
+      "status": "Finished",
+      "date": "11.11.2026"
+    }
+  ],
+  "players": []
+}

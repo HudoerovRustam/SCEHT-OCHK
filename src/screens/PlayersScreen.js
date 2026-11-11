@@ -1,56 +1,54 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Keyboard } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, Keyboard } from 'react-native';
 import { useGameStore } from '../store/gameStore';
 
-export default function PlayersScreen({ navigation }) {
+export default function PlayersScreen({ route, navigation }) {
   const store = useGameStore();
-
+  const { gameName } = route.params || { gameName: 'Игра' };
+  
   const [playerName, setPlayerName] = useState('');
+  const [localPlayers, setLocalPlayers] = useState([]);
 
-  const [localPlayers, setLocalPlayers] = useState([
-    { id: '1', name: 'Игрок 1', avatar: '🏃' },
-    { id: '2', name: 'Игрок 2', avatar: '🎯' },
-    { id: '3', name: 'Игрок 3', avatar: '🎲' },
-    { id: '4', name: 'Игрок 4', avatar: '🐷' },
-    { id: '5', name: 'Игрок 5', avatar: '🦄'},
-    { id: '6', name: 'Игрок 6', avatar: '🦁'},
-    { id: '7', name: 'Игрок 7', avatar: '🦊'},
-    { id: '8', name: 'Игрок 8', avatar: '🐱'},
-  ]);
+  useEffect(() => {
+    if (store && store.activePlayers) {
+      setLocalPlayers(store.activePlayers);
+    }
+  }, []);
 
   const handleAddPlayer = () => {
-    if (!playerName || playerName.trim() === '') return;
+    if (playerName.trim() === '') return;
 
-    const avatars = ['🏃', '🎯', '🎲', '🐷', '🦄', '🦁', '🦊', '🐱', '👤'];
+    const avatars = ['🏃', '🎯', '🎲', '🐷', '🦄', '🦁', '🦊', '🐱'];
     const newPlayer = {
       id: Date.now().toString(),
       name: playerName.trim(),
-      avatar: avatars[localPlayers.length % avatars.length]
+      avatar: avatars[localPlayers.length % avatars.length],
+      score: 0
     };
 
-    setLocalPlayers([...localPlayers, newPlayer]);
-    setPlayerName(''); 
+    const updated = [...localPlayers, newPlayer];
+    setLocalPlayers(updated);
+    if (store) store.activePlayers = updated;
+
+    setPlayerName('');
     Keyboard.dismiss();
   };
 
-
   const handleRemovePlayer = (id) => {
-    setLocalPlayers(prev => prev.filter(p => p.id !== id));
+    const updated = localPlayers.filter(p => p.id !== id);
+    setLocalPlayers(updated);
+    if (store) store.activePlayers = updated;
   };
 
   const handleStartGame = () => {
     if (store) {
-      store.activePlayers = [...localPlayers];
-      if (typeof store.resetActiveScores === 'function') {
-        store.resetActiveScores();
-      }
+      store.activePlayers = localPlayers.map(p => ({ ...p, score: 0 }));
     }
-    navigation.navigate('Game');
+    navigation.navigate('Game', { gameName });
   };
 
   return (
     <View style={styles.container}>
-      
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backArrow}>❮</Text>
@@ -64,15 +62,18 @@ export default function PlayersScreen({ navigation }) {
           placeholder="Введите имя..."
           placeholderTextColor="#6B7280"
           value={playerName}
-          onChangeText={(text) => setPlayerName(text)}
+          onChangeText={setPlayerName}
         />
-        <TouchableOpacity style={styles.addButton} onPress={handleAddPlayer} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.addButton} onPress={handleAddPlayer}>
           <Text style={styles.addButtonText}>+</Text>
         </TouchableOpacity>
       </View>
-      <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-        {localPlayers.map((item) => (
-          <View key={item.id} style={styles.playerRow}>
+
+      <FlatList
+        data={localPlayers}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <View style={styles.playerRow}>
             <View style={styles.playerInfo}>
               <Text style={styles.avatar}>{item.avatar}</Text>
               <Text style={styles.playerName}>{item.name}</Text>
@@ -81,12 +82,12 @@ export default function PlayersScreen({ navigation }) {
               <Text style={styles.deleteButtonText}>❌</Text>
             </TouchableOpacity>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
+
       <TouchableOpacity style={styles.startButton} onPress={handleStartGame}>
         <Text style={styles.startButtonText}>Начать игру</Text>
       </TouchableOpacity>
-
     </View>
   );
 }
@@ -97,16 +98,15 @@ const styles = StyleSheet.create({
   backButton: { backgroundColor: '#E5E7EB', width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   backArrow: { fontSize: 18, fontWeight: 'bold', color: '#000000' },
   headerTitle: { color: '#ffffff', fontSize: 24, fontWeight: 'bold', marginLeft: 20 },
-  inputContainer: { flexDirection: 'row', marginBottom: 20, alignItems: 'center' },
-  input: { flex: 1, backgroundColor: '#D1D5DB', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 16, color: '#000000', fontSize: 16, marginRight: 10 },
+  inputContainer: { flexDirection: 'row', marginBottom: 20, alignItems: 'center', width: '100%', height: 50 },
+  input: { flex: 1, backgroundColor: '#D1D5DB', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 16, color: '#000000', fontSize: 16, marginRight: 10, height: '100%' },
   addButton: { backgroundColor: '#6C47FF', width: 50, height: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   addButtonText: { color: '#ffffff', fontSize: 24, fontWeight: 'bold' },
-  list: { paddingBottom: 20 },
   playerRow: { flexDirection: 'row', backgroundColor: '#262930', borderRadius: 14, padding: 14, alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   playerInfo: { flexDirection: 'row', alignItems: 'center' },
   avatar: { fontSize: 24, marginRight: 15 },
   playerName: { color: '#ffffff', fontSize: 18, fontWeight: '500' },
-  deleteButton: { backgroundColor: '#fdfcfc', width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  deleteButton: { backgroundColor: '#EF4444', width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   deleteButtonText: { color: '#ffffff', fontSize: 12, fontWeight: 'bold' },
   startButton: { backgroundColor: '#6C47FF', paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginBottom: 30 },
   startButtonText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' }
