@@ -1,42 +1,32 @@
-const MOCK_GAMES = Array.from({ length: 35 }, (_, index) => {
-  const id = (index + 1).toString();
-  const date = new Date(2026, 10, Math.floor(Math.random() * 28) + 1).toLocaleDateString('ru-RU');
-  const players = [
-    { id: '1', name: 'Игрок 1', avatar: '🏃', score: Math.floor(Math.random() * 50) + 10 },
-    { id: '2', name: 'Игрок 2', avatar: '🎯', score: Math.floor(Math.random() * 50) + 10 },
-    { id: '3', name: 'Игрок 3', avatar: '🎲', score: Math.floor(Math.random() * 50) + 10 },
-    { id: '4', name: 'Игрок 4', avatar: '🐷', score: Math.floor(Math.random() * 50) + 10 },
-  ];
-  return {
-    id,
-    title: `Партия #${id}`,
-    date,
-    duration: '00:20:00',
-    winner: [...players].sort((a, b) => b.score - a.score)[0].name,
-    status: 'Finished',
-    priority: 'Normal',
-    location: { address: 'Москва, ул. Игровая', latitude: 55.75, longitude: 37.62 },
-    players,
-    history: [{ status: 'Created', timestamp: `${date} 18:00` }],
-    photos: []
-  };
-});
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { apiService } from '../services/api';
+
+const STORAGE_KEY = '@schetochka_games_history';
 
 const globalStore = {
   user: { id: 'u_1', name: 'Разработчик', avatar: '👑' },
-  games: MOCK_GAMES,
+  games: [], 
   isLoading: false,
-  isInitialized: true,
+  isInitialized: false,
+  
   activePlayers: [
     { id: '1', name: 'Игрок 1', avatar: '🏃', score: 0 },
     { id: '2', name: 'Игрок 2', avatar: '🎯', score: 0 },
     { id: '3', name: 'Игрок 3', avatar: '🎲', score: 0 },
     { id: '4', name: 'Игрок 4', avatar: '🐷', score: 0 },
-    { id: '5', name: 'Игрок 5', avatar: '🦄', score: 0},
-    { id: '6', name: 'Игрок 6', avatar: '🦁', score: 0},
-    { id: '7', name: 'Игрок 7', avatar: '🦊', score: 0},
-    { id: '8', name: 'Игрок 8', avatar: '🐱', score: 0},
   ],
+
+  initStore: async () => {
+    if (globalStore.isInitialized) return;
+    try {
+      const savedGames = await AsyncStorage.getItem(STORAGE_KEY);
+      if (savedGames !== null) {
+        globalStore.games = JSON.parse(savedGames);
+      }
+    } catch (e) {} finally {
+      globalStore.isInitialized = true;
+    }
+  },
 
   setPlayersCount: (count) => {
     const avatars = ['🏃', '🎯', '🎲', '🐷', '🦄', '🦁', '🦊', '🐱'];
@@ -47,53 +37,42 @@ const globalStore = {
       score: 0
     }));
   },
-  addActivePlayer: (name) => {
-    const avatars = ['🏃', '🎯', '🎲', '🐷', '👤'];
-    
-    const newPlayer = {
-      id: Date.now().toString(),
-      name: name,
-      avatar: avatars[globalStore.activePlayers.length % avatars.length],
-      score: 0
-    };
-    globalStore.activePlayers = [...globalStore.activePlayers, newPlayer];
-  },
-  removeActivePlayer: (id) => {
-    globalStore.activePlayers = globalStore.activePlayers.filter(p => p.id !== id);
-  },
-
-  changeActiveScore: (id, amount) => {
-    globalStore.activePlayers = globalStore.activePlayers.map(p => 
-      p.id === id ? { ...p, score: Math.max(0, p.score + amount) } : p
-    );
-  },
 
   resetActiveScores: () => {
     globalStore.activePlayers = globalStore.activePlayers.map(p => ({ ...p, score: 0 }));
   },
 
-  fetchGames: async () => {
-    return new Promise((resolve) => setTimeout(resolve, 100));
-  },
-  addGame: (newGame) => {
+  addGame: async (newGame) => {
     const freshGame = {
       id: Date.now().toString(),
       title: newGame.title || `Партия #${globalStore.games.length + 1}`,
       date: new Date().toLocaleDateString('ru-RU'),
-      duration: '00:15:00',
       winner: newGame.winner || 'Не определен',
-      status: 'Finished',
-      priority: 'Normal',
-      location: { address: 'Локальная игра', latitude: 55.75, longitude: 37.62 },
-      players: globalStore.activePlayers,
-      history: [],
-      photos: []
+      status: 'Finished'
     };
-    globalStore.games = [freshGame, ...globalStore.games];
+    
+    const updatedList = [freshGame, ...globalStore.games];
+    globalStore.games = updatedList;
+    
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedList));
+    } catch (e) {}
+
+    // Отправка партии в облако через apiService
+    try {
+      await apiService.createGame(freshGame.title, freshGame.winner);
+    } catch (e) {
+      console.log('Нет интернета для отправки в облако');
+    }
   },
 
-  removeGame: (id) => {
-    globalStore.games = globalStore.games.filter((game) => game.id !== id);
+  removeGame: async (id) => {
+    const updatedList = globalStore.games.filter((game) => game.id !== id);
+    globalStore.games = updatedList;
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedList));
+      await apiService.deleteGame(id);
+    } catch (e) {}
   }
 };
 

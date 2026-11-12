@@ -5,6 +5,10 @@ import { useGameStore } from '../store/gameStore';
 export default function GameScreen({ route, navigation }) {
   const store = useGameStore();
   const { gameName } = route.params || { gameName: 'Партия' };
+  
+  // Ловим флаг режима таймера (если не передан — по дефолту false)
+  const isTimerMode = route.params?.isTimerMode || false;
+
   const [matchPlayers, setMatchPlayers] = useState([]);
 
   useEffect(() => {
@@ -33,13 +37,16 @@ export default function GameScreen({ route, navigation }) {
         <Text style={styles.headerTitle}>{gameName}</Text>
       </View>
 
-      <TouchableOpacity style={styles.timerBadge} onPress={() => navigation.navigate('Timer')}>
-        <Text style={styles.timerText}>⏱️  00:15:00</Text>
-      </TouchableOpacity>
+      {isTimerMode && (
+        <TouchableOpacity style={styles.timerBadge} onPress={() => navigation.navigate('Timer')}>
+          <Text style={styles.timerText}>⏱️  00:15:00</Text>
+        </TouchableOpacity>
+      )}
 
       <FlatList
         data={matchPlayers}
         keyExtractor={(item) => item.id.toString()}
+        contentContainerStyle={{ paddingTop: isTimerMode ? 0 : 15 }}
         renderItem={({ item }) => (
           <View style={styles.playerCard}>
             <View style={styles.playerInfo}>

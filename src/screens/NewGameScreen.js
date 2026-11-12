@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity } from 'react-native';
+import { useGameStore } from '../store/gameStore'; // Импортируем наше постоянное хранилище
 
 export default function NewGameScreen({ navigation }) {
+  const store = useGameStore(); // Подключаем стор
+
   const [gameName, setGameName] = useState('');
   const [localCount, setLocalCount] = useState(4);
   const [isTimerMode, setIsTimerMode] = useState(false);
@@ -12,6 +15,21 @@ export default function NewGameScreen({ navigation }) {
 
   const handlePlus = () => {
     setLocalCount(localCount + 1);
+  };
+
+  // Функция перехода, которая применяет настройки счетчика к глобальной памяти
+  const handleProceed = () => {
+    if (store && typeof store.setPlayersCount === 'function') {
+      // Принудительно заставляем стор пересоздать массив игроков под нужное число
+      store.setPlayersCount(localCount);
+    }
+
+    // Переходим на экран имен, прокидывая название игры
+    navigation.navigate('Players', { 
+      playersCount: localCount, 
+      isTimerMode: isTimerMode,
+      gameName: gameName.trim() || 'Игра'
+    });
   };
 
   return (
@@ -57,13 +75,10 @@ export default function NewGameScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
+        {/* Обновленная фиолетовая кнопка */}
         <TouchableOpacity 
           style={styles.submitButton}
-          onPress={() => navigation.navigate('Players', { 
-            playersCount: localCount, 
-            isTimerMode,
-            gameName: gameName.trim() || 'Игра'
-          })}
+          onPress={handleProceed}
         >
           <Text style={styles.submitButtonText}>Продолжить</Text>
         </TouchableOpacity>

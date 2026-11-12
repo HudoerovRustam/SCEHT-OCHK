@@ -1,124 +1,135 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
-import { API_CONFIG } from '../services/api.js';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity } from 'react-native';
+import NetInfo from '@react-native-community/netinfo';
+import { apiService } from '../services/api';
+import { useGameStore } from '../store/gameStore';
 
 export default function HistoryScreen() {
-  // Три обязательных состояния данных
-  const [networkGames, setNetworkGames] = useState([]);
+  const store = useGameStore();
+  const [cloudGames, setCloudGames] = useState([]);
+  const [leaderboard, setLeaderboard] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  // Задача 1: Состояние для паттерна Pull-to-Refresh
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
 
-  // Основная функция загрузки данных (поддерживает AbortSignal для предотвращения утечек памяти)
-  const loadData = async (signal = null, fromRefresh = false) => {
-    if (fromRefresh) {
-      setIsRefreshing(true);
-    } else {
-      setIsLoading(true);
-    }
-    setError(null);
+  const loadCloudHistory = async (fromRefresh = false) => {
+    if (fromRefresh) setIsRefreshing(true);
+    else setIsLoading(true);
 
     try {
-      // Передаем signal в fetch, чтобы иметь возможность отменить запрос
-      const response = await fetch(
-        `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.GAMES_LIST}`,
-        { signal }
-      );
-      
-      if (!response.ok) {
-        throw new Error(`Ошибка сервера: ${response.status}`);
-      }
+      const validatedGames = await apiService.getGames(20, 'desc');
+      setCloudGames(validatedGames);
+      if (store) store.games = validatedGames;
 
-      const json = await response.json();
-      
-      if (Array.isArray(json)) {
-        const mappedGames = json.map(item => ({
-          id: item.id.toString(),
-          title: `Партия #${item.id}`,
-          date: '11.11.2026',
-          winner: item.completed ? 'Игрок 1 (Победа)' : 'Ничья',
-          status: item.completed ? 'Finished' : 'In Progress'
-        }));
-        setNetworkGames(mappedGames);
-      }
-    } catch (err) {
-      // Игнорируем ошибку отмены, если компонент просто размонтировался
-      if (err.name !== 'AbortError') {
-        setError('Не удалось загрузить данные. Проверьте интернет-соединение.');
-      }
+      // Считаем рейтинг побед
+      const winsMap = {};
+      validatedGames.forEach(game => {
+        const name = game.winner;
+        if (name && name !== 'Не определен' && name !== 'Ничья') {
+          winsMap[name] = (winsMap[name] || 0) + 1;
+        }
+      });
+
+      const sortedRating = Object.keys(winsMap)
+        .map(name => ({ name, wins: winsMap[name] }))
+        .sort((a, b) => b.wins - a.wins);
+
+      setLeaderboard(sortedRating);
+      setIsOnline(true);
+    } catch (error) {
+      setIsOnline(false);
     } finally {
-      // Гарантированно выключаем оба спиннера в блоке finally
       setIsLoading(false);
       setIsRefreshing(false);
     }
   };
 
-  // Задача 2: Предотвращение утечек памяти (Memory Leaks) через cleanup-функцию
   useEffect(() => {
-    const controller = new AbortController();
-    const { signal } = controller;
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setIsOnline(!!state.isConnected);
+      if (state.isConnected) {
+        loadCloudHistory(false);
+      }
+    });
 
-    loadData(signal, false);
-
-    // Возвращаем cleanup-функцию, которая сработает при уходе с экрана
-    return () => {
-      controller.abort(); // Отменяем текущий fetch-запрос, спасая память
-    };
+    loadCloudHistory(false);
+    return () => unsubscribe();
   }, []);
 
-  // Обработчик жеста Pull-to-Refresh
-  const handleRefresh = () => {
-    loadData(null, true);
+  const handleDeleteGame = async (id) => {
+    setCloudGames(prev => prev.filter(g => g.id !== id));
+    if (store && typeof store.removeGame === 'function') {
+      await store.removeGame(id);
+    }
+    loadCloudHistory(true);
   };
 
-  // Условный рендеринг: Ожидание первичной загрузки
   if (isLoading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#6C47FF" />
-        <Text style={styles.loadingText}>Загрузка...</Text>
+        <Text style={styles.loadingText}>Загрузка рейтинга из Supabase...</Text>
       </View>
     );
   }
 
-  // Условный рендеринг: Вывод ошибки через стандартный <Text>
-  if (error) {
+  if (!isOnline) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorIcon}>⚠️</Text>
-        <Text style={styles.errorText}>{error}</Text>
+        <Text style={styles.errorIcon}>🌐</Text>
+        <Text style={styles.errorText}>Нет интернета</Text>
+        <Text style={styles.errorSubText}>Проверьте подключение к сети или отключите Режим полета.</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={() => loadCloudHistory(false)}>
+          <Text style={styles.retryButtonText}>🔄 Повторить попытку</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.headerTitle}>История игр</Text>
+      {leaderboard.length > 0 && (
+        <View style={styles.ratingBox}>
+          <Text style={styles.ratingHeader}>🏆 Рейтинг игроков (Supabase)</Text>
+          {leaderboard.map((player, index) => (
+            <View key={player.name} style={styles.ratingRow}>
+              <Text style={styles.ratingName}>
+                {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '👤'} {player.name}
+              </Text>
+              <Text style={styles.ratingWins}>Побед: {player.wins}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      <Text style={styles.headerTitle}>История игр </Text>
       
       <FlatList
-        data={networkGames}
+        data={cloudGames}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View style={styles.gameCard}>
-            <Text style={styles.gameTitle}>{item.title}</Text>
-            <Text style={styles.gameInfo}>{item.date} • Победитель: {item.winner}</Text>
-            <Text style={styles.gameStatus}>Статус: {item.status}</Text>
+            <View style={{ flex: 1, paddingRight: 10 }}>
+              <Text style={styles.gameTitle}>{item.title}</Text>
+              <Text style={styles.gameInfo}>{item.date} • Победитель: {item.winner}</Text>
+              <Text style={styles.gameStatus}>Сохранено в Supabase ✅</Text>
+            </View>
+            <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDeleteGame(item.id)}>
+              <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>❌</Text>
+            </TouchableOpacity>
           </View>
         )}
-        // Задача 1: Интеграция компонента RefreshControl во FlatList
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
-            onRefresh={handleRefresh}
-            tintColor="#6C47FF" // Цвет крутилки на iOS
-            colors={['#6C47FF']} // Цвет крутилки на Android
+            onRefresh={() => loadCloudHistory(true)}
+            tintColor="#6C47FF"
+            colors={['#6C47FF']}
           />
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>История игр пуста.</Text>
+            <Text style={styles.emptyText}>В облаке пока нет партий. Сыграйте матч!</Text>
           </View>
         }
       />
@@ -128,15 +139,24 @@ export default function HistoryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1C1E22', paddingTop: 50, paddingHorizontal: 20 },
-  headerTitle: { color: '#ffffff', fontSize: 28, fontWeight: 'bold', marginBottom: 20 },
-  center: { flex: 1, backgroundColor: '#1C1E22', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
+  headerTitle: { color: '#ffffff', fontSize: 22, fontWeight: 'bold', marginBottom: 15, marginTop: 10 },
+  center: { flex: 1, backgroundColor: '#1C1E22', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
   loadingText: { color: '#ffffff', marginTop: 10, fontSize: 16 },
-  errorIcon: { fontSize: 40, marginBottom: 10 },
-  errorText: { color: '#EF4444', fontSize: 16, textAlign: 'center', fontWeight: 'bold' },
-  gameCard: { backgroundColor: '#262930', borderRadius: 14, padding: 16, marginBottom: 12 },
+  ratingBox: { backgroundColor: '#262930', borderRadius: 16, padding: 16, marginBottom: 15, borderWidth: 1, borderColor: '#6C47FF' },
+  ratingHeader: { color: '#ffffff', fontSize: 18, fontWeight: 'bold', marginBottom: 12 },
+  ratingRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#374151' },
+  ratingName: { color: '#E5E7EB', fontSize: 16, fontWeight: '600' },
+  ratingWins: { color: '#22C55E', fontSize: 16, fontWeight: 'bold' },
+  errorIcon: { fontSize: 60, marginBottom: 15 },
+  errorText: { color: '#EF4444', fontSize: 24, fontWeight: 'bold', marginBottom: 10, textAlign: 'center' },
+  errorSubText: { color: '#A0A5B0', fontSize: 15, textAlign: 'center', marginBottom: 25, lineHeight: 22 },
+  retryButton: { backgroundColor: '#6C47FF', paddingVertical: 14, paddingHorizontal: 24, borderRadius: 12 },
+  retryButtonText: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
+  gameCard: { flexDirection: 'row', backgroundColor: '#262930', borderRadius: 14, padding: 16, marginBottom: 12, justifyContent: 'space-between', alignItems: 'center' },
   gameTitle: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' },
   gameInfo: { color: '#A0A5B0', fontSize: 14, marginTop: 4 },
-  gameStatus: { color: '#6C47FF', fontSize: 12, fontWeight: '600', marginTop: 4 },
-  emptyContainer: { alignItems: 'center', marginTop: 50 },
-  emptyText: { color: '#A0A5B0', fontSize: 16 }
+  gameStatus: { color: '#10B981', fontSize: 12, fontWeight: '600', marginTop: 4 },
+  deleteBtn: { backgroundColor: '#EF4444', width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  emptyContainer: { alignItems: 'center', marginTop: 60 },
+  emptyText: { color: '#A0A5B0', fontSize: 16, textAlign: 'center' }
 });

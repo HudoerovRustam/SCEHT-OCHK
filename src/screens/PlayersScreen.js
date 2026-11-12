@@ -4,17 +4,21 @@ import { useGameStore } from '../store/gameStore';
 
 export default function PlayersScreen({ route, navigation }) {
   const store = useGameStore();
-  const { gameName } = route.params || { gameName: 'Игра' };
+  
+  // НАДЁЖНЫЙ ПРИЁМ ПАРАМЕТРОВ: Вытаскиваем сразу все настройки из NewGameScreen
+  const { gameName, isTimerMode } = route.params || { gameName: 'Игра', isTimerMode: false };
   
   const [playerName, setPlayerName] = useState('');
   const [localPlayers, setLocalPlayers] = useState([]);
 
+  // Синхронизируем данные с глобальным стором при открытии экрана
   useEffect(() => {
     if (store && store.activePlayers) {
       setLocalPlayers(store.activePlayers);
     }
-  }, []);
+  }, [store?.activePlayers]);
 
+  // Функция добавления нового персонажа (Плюс)
   const handleAddPlayer = () => {
     if (playerName.trim() === '') return;
 
@@ -34,17 +38,36 @@ export default function PlayersScreen({ route, navigation }) {
     Keyboard.dismiss();
   };
 
+  // Изменение имени прямо внутри карточки игрока
+  const handleUpdatePlayerName = (id, newText) => {
+    const updated = localPlayers.map(player => {
+      if (player.id === id) {
+        return { ...player, name: newText };
+      }
+      return player;
+    });
+    
+    setLocalPlayers(updated);
+    if (store) store.activePlayers = updated;
+  };
+
+  // Функция удаления персонажа (Крестик)
   const handleRemovePlayer = (id) => {
     const updated = localPlayers.filter(p => p.id !== id);
     setLocalPlayers(updated);
     if (store) store.activePlayers = updated;
   };
 
+  // ФИКС ФУНКЦИИ ПЕРЕХОДА: Передаем флаг, который вытащили на строке 9
   const handleStartGame = () => {
     if (store) {
       store.activePlayers = localPlayers.map(p => ({ ...p, score: 0 }));
     }
-    navigation.navigate('Game', { gameName });
+    // Передаем параметры на игровой экран матча
+    navigation.navigate('Game', { 
+      gameName: gameName, 
+      isTimerMode: isTimerMode 
+    });
   };
 
   return (
@@ -59,7 +82,7 @@ export default function PlayersScreen({ route, navigation }) {
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
-          placeholder="Введите имя..."
+          placeholder="Впишите ещё игрока..."
           placeholderTextColor="#6B7280"
           value={playerName}
           onChangeText={setPlayerName}
@@ -71,13 +94,20 @@ export default function PlayersScreen({ route, navigation }) {
 
       <FlatList
         data={localPlayers}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <View style={styles.playerRow}>
             <View style={styles.playerInfo}>
               <Text style={styles.avatar}>{item.avatar}</Text>
-              <Text style={styles.playerName}>{item.name}</Text>
+              <TextInput
+                style={styles.playerInputName}
+                value={item.name}
+                onChangeText={(text) => handleUpdatePlayerName(item.id, text)}
+                placeholder="Имя игрока"
+                placeholderTextColor="#A0A5B0"
+              />
             </View>
+            
             <TouchableOpacity style={styles.deleteButton} onPress={() => handleRemovePlayer(item.id)}>
               <Text style={styles.deleteButtonText}>❌</Text>
             </TouchableOpacity>
@@ -103,10 +133,10 @@ const styles = StyleSheet.create({
   addButton: { backgroundColor: '#6C47FF', width: 50, height: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   addButtonText: { color: '#ffffff', fontSize: 24, fontWeight: 'bold' },
   playerRow: { flexDirection: 'row', backgroundColor: '#262930', borderRadius: 14, padding: 14, alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  playerInfo: { flexDirection: 'row', alignItems: 'center' },
+  playerInfo: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 10 },
   avatar: { fontSize: 24, marginRight: 15 },
-  playerName: { color: '#ffffff', fontSize: 18, fontWeight: '500' },
-  deleteButton: { backgroundColor: '#fcfbfb', width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  playerInputName: { color: '#ffffff', fontSize: 18, fontWeight: '500', flex: 1, paddingVertical: 2 },
+  deleteButton: { backgroundColor: '#ffffff', width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   deleteButtonText: { color: '#ffffff', fontSize: 12, fontWeight: 'bold' },
   startButton: { backgroundColor: '#6C47FF', paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginBottom: 30 },
   startButtonText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' }
