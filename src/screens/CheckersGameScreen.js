@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert, useWindowDimensions, ScrollView } from 'react-native';
 import { useGameStore } from '../store/gameStore';
 import { roomService } from '../services/api';
+import SurrenderButton from '../components/SurrenderButton';
 
 const createInitialCheckers = () => {
   const b = Array.from({ length: 8 }, () => Array(8).fill(null));
@@ -107,7 +108,6 @@ export default function CheckersGameScreen({ route, navigation }) {
     }
     return moves;
   };
-
   const handlePress = async (r, c) => {
     if (isFinished) return;
     if (mode === 'online' && turn !== myRole) return;
@@ -227,12 +227,24 @@ export default function CheckersGameScreen({ route, navigation }) {
         </View>
 
         <View style={styles.controls}>
-          <TouchableOpacity style={styles.winBtn1} onPress={() => finishAndSave(player1)}>
-            <Text style={styles.btnText}>🏆 Победа: {player1}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.winBtn2} onPress={() => finishAndSave(p2Name)}>
-            <Text style={styles.btnText}>🏆 Победа: {p2Name}</Text>
-          </TouchableOpacity>
+          {mode === 'local' && (
+            <>
+              <TouchableOpacity style={styles.winBtn1} onPress={() => finishAndSave(player1)}>
+                <Text style={styles.btnText}>🏆 Победа: {player1}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.winBtn2} onPress={() => finishAndSave(p2Name)}>
+                <Text style={styles.btnText}>🏆 Победа: {p2Name}</Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          <SurrenderButton
+            mode={mode}
+            myRole={myRole}
+            player1={player1}
+            p2Name={p2Name}
+            onSurrender={(winnerName) => finishAndSave(winnerName)}
+          />
         </View>
       </View>
     </ScrollView>
@@ -251,21 +263,21 @@ const styles = StyleSheet.create({
   codeText: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
   turnBanner: { backgroundColor: '#262930', paddingVertical: 10, borderRadius: 12, alignItems: 'center', marginBottom: 16, borderWidth: 1.5, borderColor: '#6C47FF' },
   turnText: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
-boardFrame: { padding: 4, backgroundColor: '#2D3139', borderRadius: 12, alignSelf: 'center', marginBottom: 20, elevation: 8 },
-board: { borderRadius: 8, overflow: 'hidden' },
-row: { flexDirection: 'row' },
-lightSquare: { backgroundColor: '#CBD5E1' },
-darkSquare: { backgroundColor: '#475569' },
-selectedSquare: { backgroundColor: '#7C3AED' },
-hintDot: { width: 15, height: 15, borderRadius: 8, backgroundColor: '#10B981' },
-checkerOuter: { alignItems: 'center', justifyContent: 'center', elevation: 5 },
-whiteCheckerOuter: { backgroundColor: '#F8FAFC', borderWidth: 2, borderColor: '#94A3B8' },
-blackCheckerOuter: { backgroundColor: '#0F172A', borderWidth: 2, borderColor: '#6366F1' },
-checkerInner: { alignItems: 'center', justifyContent: 'center', borderWidth: 1.5 },
-whiteCheckerInner: { borderColor: '#CBD5E1', backgroundColor: '#F1F5F9' },
-blackCheckerInner: { borderColor: '#334155', backgroundColor: '#1E293B' },
-controls: { gap: 10 },
-winBtn1: { backgroundColor: '#6C47FF', paddingVertical: 13, borderRadius: 12, alignItems: 'center' },
-winBtn2: { backgroundColor: '#10B981', paddingVertical: 13, borderRadius: 12, alignItems: 'center' },
-btnText: { color: '#fff', fontSize: 15, fontWeight: 'bold' }
+  boardFrame: { padding: 4, backgroundColor: '#2D3139', borderRadius: 12, alignSelf: 'center', marginBottom: 20, elevation: 8 },
+  board: { borderRadius: 8, overflow: 'hidden' },
+  row: { flexDirection: 'row' },
+  lightSquare: { backgroundColor: '#CBD5E1' },
+  darkSquare: { backgroundColor: '#475569' },
+  selectedSquare: { backgroundColor: '#7C3AED' },
+  hintDot: { width: 15, height: 15, borderRadius: 8, backgroundColor: '#10B981' },
+  checkerOuter: { alignItems: 'center', justifyContent: 'center', elevation: 5 },
+  whiteCheckerOuter: { backgroundColor: '#F8FAFC', borderWidth: 2, borderColor: '#94A3B8' },
+  blackCheckerOuter: { backgroundColor: '#0F172A', borderWidth: 2, borderColor: '#6366F1' },
+  checkerInner: { alignItems: 'center', justifyContent: 'center', borderWidth: 1.5 },
+  whiteCheckerInner: { borderColor: '#CBD5E1', backgroundColor: '#F1F5F9' },
+  blackCheckerInner: { borderColor: '#334155', backgroundColor: '#1E293B' },
+  controls: { gap: 10 },
+  winBtn1: { backgroundColor: '#6C47FF', paddingVertical: 13, borderRadius: 12, alignItems: 'center' },
+  winBtn2: { backgroundColor: '#10B981', paddingVertical: 13, borderRadius: 12, alignItems: 'center' },
+  btnText: { color: '#fff', fontSize: 15, fontWeight: 'bold' }
 });

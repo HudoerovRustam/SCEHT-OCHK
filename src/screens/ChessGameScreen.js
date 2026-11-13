@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert, useWindowDimensions, ScrollView } from 'react-native';
 import { useGameStore } from '../store/gameStore';
 import { roomService } from '../services/api';
+import SurrenderButton from '../components/SurrenderButton';
 
 const INITIAL_BOARD = [
   ['♜', '♞', '♝', '♛', '♚', '♝', '♞', '♜'],
@@ -83,7 +84,7 @@ export default function ChessGameScreen({ route, navigation }) {
   const { width, height } = useWindowDimensions();
   const { mode = 'local', roomId, roomCode, myRole, player1 = 'Белые', player2 = 'Чёрные' } = route.params || {};
 
-  const boardSize = Math.min(width - 36, height * 0.52, 460);
+  const boardSize = Math.floor(Math.min(width - 36, height * 0.52, 460));
   const squareSize = boardSize / 8;
 
   const [board, setBoard] = useState(INITIAL_BOARD);
@@ -115,7 +116,6 @@ export default function ChessGameScreen({ route, navigation }) {
 
     return () => clearInterval(timer);
   }, [mode, roomId, isFinished]);
-
   const finishAndSave = async (winnerName, finalBoard = board) => {
     setIsFinished(true);
     try {
@@ -250,12 +250,24 @@ export default function ChessGameScreen({ route, navigation }) {
         </View>
 
         <View style={styles.controls}>
-          <TouchableOpacity style={styles.winBtn1} onPress={() => finishAndSave(player1)}>
-            <Text style={styles.btnText}>🏆 Мат: {player1}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.winBtn2} onPress={() => finishAndSave(p2Name)}>
-            <Text style={styles.btnText}>🏆 Мат: {p2Name}</Text>
-          </TouchableOpacity>
+          {mode === 'local' && (
+            <>
+              <TouchableOpacity style={styles.winBtn1} onPress={() => finishAndSave(player1)}>
+                <Text style={styles.btnText}>🏆 Мат: {player1}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.winBtn2} onPress={() => finishAndSave(p2Name)}>
+                <Text style={styles.btnText}>🏆 Мат: {p2Name}</Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          <SurrenderButton
+            mode={mode}
+            myRole={myRole}
+            player1={player1}
+            p2Name={p2Name}
+            onSurrender={(winnerName) => finishAndSave(winnerName)}
+          />
         </View>
       </View>
     </ScrollView>
@@ -266,26 +278,26 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1C1E22' },
   scrollContent: { paddingTop: 45, paddingBottom: 30, paddingHorizontal: 18, alignItems: 'center' },
   innerWrapper: { width: '100%', maxWidth: 540 },
-header: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
-backButton: { backgroundColor: '#E5E7EB', width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-backArrow: { fontSize: 18, fontWeight: 'bold', color: '#000' },
-headerTitle: { color: '#fff', fontSize: 24, fontWeight: 'bold', marginLeft: 16, flex: 1 },
-codeBadge: { backgroundColor: '#6C47FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
-codeText: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
-turnBanner: { backgroundColor: '#262930', paddingVertical: 10, borderRadius: 12, alignItems: 'center', marginBottom: 16, borderWidth: 1.5, borderColor: '#6C47FF' },
-turnText: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
-boardFrame: { padding: 4, backgroundColor: '#2D3139', borderRadius: 12, alignSelf: 'center', marginBottom: 20, elevation: 8 },
-board: { borderRadius: 8, overflow: 'hidden' },
-row: { flexDirection: 'row' },
-lightSquare: { backgroundColor: '#CBD5E1' },
-darkSquare: { backgroundColor: '#475569' },
-selectedSquare: { backgroundColor: '#7C3AED' },
-hintDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: 'rgba(16, 185, 129, 0.9)', position: 'absolute', zIndex: 5 },
-captureRing: { borderWidth: 3, borderColor: '#EF4444', position: 'absolute', zIndex: 5 },
-whitePieceText: { color: '#FFFFFF', textShadowColor: '#0F172A', textShadowOffset: { width: 0, height: 1.5 }, textShadowRadius: 3 },
-blackPieceText: { color: '#0F172A', textShadowColor: 'rgba(255, 255, 255, 0.35)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 1.5 },
-controls: { gap: 10 },
-winBtn1: { backgroundColor: '#6C47FF', paddingVertical: 13, borderRadius: 12, alignItems: 'center' },
-winBtn2: { backgroundColor: '#10B981', paddingVertical: 13, borderRadius: 12, alignItems: 'center' },
-btnText: { color: '#fff', fontSize: 15, fontWeight: 'bold' }
+  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
+  backButton: { backgroundColor: '#E5E7EB', width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  backArrow: { fontSize: 18, fontWeight: 'bold', color: '#000' },
+  headerTitle: { color: '#fff', fontSize: 24, fontWeight: 'bold', marginLeft: 16, flex: 1 },
+  codeBadge: { backgroundColor: '#6C47FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
+  codeText: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
+  turnBanner: { backgroundColor: '#262930', paddingVertical: 10, borderRadius: 12, alignItems: 'center', marginBottom: 16, borderWidth: 1.5, borderColor: '#6C47FF' },
+  turnText: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
+  boardFrame: { padding: 4, backgroundColor: '#2D3139', borderRadius: 12, alignSelf: 'center', marginBottom: 20, elevation: 8 },
+  board: { borderRadius: 8, overflow: 'hidden' },
+  row: { flexDirection: 'row' },
+  lightSquare: { backgroundColor: '#CBD5E1' },
+  darkSquare: { backgroundColor: '#475569' },
+  selectedSquare: { backgroundColor: '#7C3AED' },
+  hintDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: 'rgba(16, 185, 129, 0.9)', position: 'absolute', zIndex: 5 },
+  captureRing: { borderWidth: 3, borderColor: '#EF4444', position: 'absolute', zIndex: 5 },
+  whitePieceText: { color: '#FFFFFF', textShadowColor: '#0F172A', textShadowOffset: { width: 0, height: 1.5 }, textShadowRadius: 3 },
+  blackPieceText: { color: '#0F172A', textShadowColor: 'rgba(255, 255, 255, 0.35)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 1.5 },
+  controls: { gap: 10 },
+  winBtn1: { backgroundColor: '#6C47FF', paddingVertical: 13, borderRadius: 12, alignItems: 'center' },
+  winBtn2: { backgroundColor: '#10B981', paddingVertical: 13, borderRadius: 12, alignItems: 'center' },
+  btnText: { color: '#fff', fontSize: 15, fontWeight: 'bold' }
 });

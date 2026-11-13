@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert, useWindowDimensions, ScrollView } from 'react-native';
 import { useGameStore } from '../store/gameStore';
 import { roomService } from '../services/api';
+import SurrenderButton from '../components/SurrenderButton';
 
 const WINNING_LINES = ['0,1,2', '3,4,5', '6,7,8', '0,3,6', '1,4,7', '2,5,8', '0,4,8', '2,4,6'];
+const ROWS = [[0, 1, 2], [3, 4, 5], [6, 7, 8]];
 
 export default function TicTacToeScreen({ route, navigation }) {
   const store = useGameStore();
@@ -11,7 +13,8 @@ export default function TicTacToeScreen({ route, navigation }) {
   const { mode = 'local', roomId, roomCode, myRole, player1 = 'Крестики', player2 = 'Нолики' } = route.params || {};
 
   const boardSize = Math.floor(Math.min(width - 50, height * 0.45, 340));
-  const symbolSize = Math.floor(boardSize * 0.16);
+  const cellSize = Math.floor((boardSize - 24) / 3);
+  const symbolSize = Math.floor(cellSize * 0.48);
 
   const [cells, setCells] = useState(Array(9).fill(null));
   const [turn, setTurn] = useState('white');
@@ -123,18 +126,25 @@ export default function TicTacToeScreen({ route, navigation }) {
           </Text>
         </View>
 
-        <View style={[styles.board, { width: boardSize }]}>
-          {cells.map((value, idx) => (
-            <TouchableOpacity
-              key={idx}
-              style={styles.cell}
-              onPress={() => handleCellPress(idx)}
-              activeOpacity={0.7}
-            >
-              <Text style={[{ fontSize: symbolSize, fontWeight: 'bold' }, value === 'X' ? styles.xColor : styles.oColor]}>
-                {value === 'X' ? '❌' : value === 'O' ? '⭕' : ''}
-              </Text>
-            </TouchableOpacity>
+        <View style={styles.board}>
+          {ROWS.map((rowIndices, rIdx) => (
+            <View key={rIdx} style={styles.row}>
+              {rowIndices.map((idx) => {
+                const value = cells.at(idx);
+                return (
+                  <TouchableOpacity
+                    key={idx}
+                    style={[styles.cell, { width: cellSize, height: cellSize }]}
+                    onPress={() => handleCellPress(idx)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[{ fontSize: symbolSize, fontWeight: 'bold' }, value === 'X' ? styles.xColor : styles.oColor]}>
+                      {value === 'X' ? '❌' : value === 'O' ? '⭕' : ''}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           ))}
         </View>
 
@@ -143,6 +153,14 @@ export default function TicTacToeScreen({ route, navigation }) {
             <Text style={styles.resetBtnText}>🔄 Начать заново</Text>
           </TouchableOpacity>
         )}
+
+        <SurrenderButton
+          mode={mode}
+          myRole={myRole}
+          player1={player1}
+          p2Name={p2Name}
+          onSurrender={(winnerName) => finishAndSave(winnerName, false)}
+        />
       </View>
     </ScrollView>
   );
@@ -160,17 +178,9 @@ const styles = StyleSheet.create({
   codeText: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
   turnBanner: { backgroundColor: '#262930', paddingVertical: 12, borderRadius: 12, alignItems: 'center', marginBottom: 25, borderWidth: 1.5, borderColor: '#6C47FF' },
   turnText: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
-  board: {
-    alignSelf: 'center',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: 25,
-  },
+  board: { alignSelf: 'center', gap: 10, marginBottom: 25 },
+  row: { flexDirection: 'row', gap: 10 },
   cell: {
-    width: '31.5%',
-    aspectRatio: 1,
-    marginBottom: '2.7%',
     backgroundColor: '#262930',
     borderRadius: 16,
     alignItems: 'center',

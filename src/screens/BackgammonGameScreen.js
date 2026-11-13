@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { useGameStore } from '../store/gameStore';
 import { roomService } from '../services/api';
+import SurrenderButton from '../components/SurrenderButton';
 
 const createInitialPoints = () => {
   const pts = Array.from({ length: 24 }, () => ({ color: null, count: 0 }));
@@ -150,7 +151,6 @@ export default function BackgammonGameScreen({ route, navigation }) {
       await syncOnlineMove(newPoints, borneOff, nextTurn);
     }
   };
-
   const handleBearOff = async () => {
     if (selectedIdx === null || dice.length === 0) return;
     if (mode === 'online' && turn !== myRole) return;
@@ -271,13 +271,25 @@ export default function BackgammonGameScreen({ route, navigation }) {
           </TouchableOpacity>
         )}
 
-                <View style={styles.controls}>
-          <TouchableOpacity style={styles.winBtn1} onPress={() => finishAndSave(player1)}>
-            <Text style={styles.btnText}>🏆 Победа: {player1}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.winBtn2} onPress={() => finishAndSave(p2Name)}>
-            <Text style={styles.btnText}>🏆 Победа: {p2Name}</Text>
-          </TouchableOpacity>
+        <View style={styles.controls}>
+          {mode === 'local' && (
+            <>
+              <TouchableOpacity style={styles.winBtn1} onPress={() => finishAndSave(player1)}>
+                <Text style={styles.btnText}>🏆 Победа: {player1}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.winBtn2} onPress={() => finishAndSave(p2Name)}>
+                <Text style={styles.btnText}>🏆 Победа: {p2Name}</Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          <SurrenderButton
+            mode={mode}
+            myRole={myRole}
+            player1={player1}
+            p2Name={p2Name}
+            onSurrender={(winnerName) => finishAndSave(winnerName)}
+          />
         </View>
       </View>
     </ScrollView>

@@ -122,7 +122,16 @@ export const apiService = {
   }
 };
 export const roomService = {
+  cleanupOldRooms: async () => {
+    try {
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+      const url = `${API_CONFIG.BASE_URL}/rooms?created_at=lt.${twoHoursAgo}`;
+      await fetch(url, { method: 'DELETE', headers: getHeaders() });
+    } catch (e) {}
+  },
+
   createRoom: async (gameType, player1, initialBoard) => {
+    await roomService.cleanupOldRooms();
     const code = Math.floor(1000 + Math.random() * 9000).toString();
     const url = `${API_CONFIG.BASE_URL}/rooms`;
     const response = await fetch(url, {
@@ -144,12 +153,13 @@ export const roomService = {
   },
 
   joinRoom: async (code, player2) => {
+    await roomService.cleanupOldRooms();
     const findUrl = `${API_CONFIG.BASE_URL}/rooms?code=eq.${code.trim()}&select=*`;
     const findRes = await fetch(findUrl, { method: 'GET', headers: getHeaders() });
     const rooms = await findRes.json();
     
     if (!Array.isArray(rooms) || rooms.length === 0) {
-      throw new Error('Комната с таким кодом не найдена');
+      throw new Error('Комната не найдена или прошло более 2 часов');
     }
     
     const room = rooms.at(0);
