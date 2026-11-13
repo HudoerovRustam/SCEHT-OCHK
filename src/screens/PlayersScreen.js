@@ -1,113 +1,133 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Keyboard } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, Keyboard, Alert } from 'react-native';
 import { useGameStore } from '../store/gameStore';
+import { useResponsive } from '../utils/responsive';
 
-export default function PlayersScreen({ navigation }) {
+export default function PlayersScreen({ route, navigation }) {
   const store = useGameStore();
-
+  const { isWatch, paddingTop, paddingHorizontal, maxWidth, titleSize } = useResponsive();
+  const { gameName, isTimerMode } = route.params || { gameName: 'Игра', isTimerMode: false };
+  
   const [playerName, setPlayerName] = useState('');
+  const [localPlayers, setLocalPlayers] = useState([]);
 
-  const [localPlayers, setLocalPlayers] = useState([
-    { id: '1', name: 'Игрок 1', avatar: '🏃' },
-    { id: '2', name: 'Игрок 2', avatar: '🎯' },
-    { id: '3', name: 'Игрок 3', avatar: '🎲' },
-    { id: '4', name: 'Игрок 4', avatar: '🐷' },
-    { id: '5', name: 'Игрок 5', avatar: '🦄'},
-    { id: '6', name: 'Игрок 6', avatar: '🦁'},
-    { id: '7', name: 'Игрок 7', avatar: '🦊'},
-    { id: '8', name: 'Игрок 8', avatar: '🐱'},
-  ]);
+  useEffect(() => {
+    if (store?.activePlayers) setLocalPlayers(store.activePlayers);
+  }, [store?.activePlayers]);
 
   const handleAddPlayer = () => {
-    if (!playerName || playerName.trim() === '') return;
-
-    const avatars = ['🏃', '🎯', '🎲', '🐷', '🦄', '🦁', '🦊', '🐱', '👤'];
+    if (playerName.trim() === '') return;
+    const avatars = ['🏃', '🎯', '🎲', '🐷', '🦄', '🦁', '🦊', '🐱'];
     const newPlayer = {
       id: Date.now().toString(),
       name: playerName.trim(),
-      avatar: avatars[localPlayers.length % avatars.length]
+      avatar: avatars.at(localPlayers.length % avatars.length),
+      score: 0
     };
-
-    setLocalPlayers([...localPlayers, newPlayer]);
-    setPlayerName(''); 
+    const updated = [...localPlayers, newPlayer];
+    setLocalPlayers(updated);
+    if (store) store.activePlayers = updated;
+    setPlayerName('');
     Keyboard.dismiss();
   };
 
+  const handleUpdatePlayerName = (id, newText) => {
+    const updated = localPlayers.map(player => player.id === id ? { ...player, name: newText } : player);
+    setLocalPlayers(updated);
+    if (store) store.activePlayers = updated;
+  };
 
   const handleRemovePlayer = (id) => {
-    setLocalPlayers(prev => prev.filter(p => p.id !== id));
+    const updated = localPlayers.filter(p => p.id !== id);
+    setLocalPlayers(updated);
+    if (store) store.activePlayers = updated;
   };
 
   const handleStartGame = () => {
-    if (store) {
-      store.activePlayers = [...localPlayers];
-      if (typeof store.resetActiveScores === 'function') {
-        store.resetActiveScores();
-      }
+    if (localPlayers.length < 2) {
+      Alert.alert('Мало игроков', 'Минимум 2 участника.');
+      return;
     }
-    navigation.navigate('Game');
+    if (localPlayers.some(player => !player.name || player.name.trim() === '')) {
+      Alert.alert('Заполните имена', 'Введите имена всех игроков.');
+      return;
+    }
+    const cleanedPlayers = localPlayers.map(p => ({ ...p, name: p.name.trim(), score: 0 }));
+    if (store) store.activePlayers = cleanedPlayers;
+    navigation.navigate('Game', { gameName, isTimerMode });
   };
 
   return (
-    <View style={styles.container}>
-      
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.backArrow}>❮</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Игроки</Text>
-      </View>
+    <View style={[styles.container, { paddingTop, paddingHorizontal }]}>
+      <View style={[styles.innerWrapper, { maxWidth }]}>
+        <View style={[styles.header, isWatch && { marginBottom: 10 }]}>
+          <TouchableOpacity style={[styles.backButton, isWatch && styles.backBtnWatch]} onPress={() => navigation.goBack()}>
+            <Text style={[styles.backArrow, isWatch && { fontSize: 14 }]}>❮</Text>
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { fontSize: titleSize, marginLeft: isWatch ? 10 : 20 }]}>Игроки</Text>
+        </View>
 
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Введите имя..."
-          placeholderTextColor="#6B7280"
-          value={playerName}
-          onChangeText={(text) => setPlayerName(text)}
-        />
-        <TouchableOpacity style={styles.addButton} onPress={handleAddPlayer} activeOpacity={0.7}>
-          <Text style={styles.addButtonText}>+</Text>
-        </TouchableOpacity>
-      </View>
-      <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-        {localPlayers.map((item) => (
-          <View key={item.id} style={styles.playerRow}>
-            <View style={styles.playerInfo}>
-              <Text style={styles.avatar}>{item.avatar}</Text>
-              <Text style={styles.playerName}>{item.name}</Text>
+        <View style={[styles.inputContainer, isWatch && { height: 38, marginBottom: 10 }]}>
+          <TextInput
+            style={[styles.input, isWatch && { paddingVertical: 6, fontSize: 12 }]}
+            placeholder="Добавить..."
+            placeholderTextColor="#6B7280"
+            value={playerName}
+            onChangeText={setPlayerName}
+          />
+          <TouchableOpacity style={[styles.addButton, isWatch && { width: 38, height: 38 }]} onPress={handleAddPlayer}>
+            <Text style={[styles.addButtonText, isWatch && { fontSize: 18 }]}>+</Text>
+          </TouchableOpacity>
+        </View>
+
+        <FlatList
+          data={localPlayers}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={{ paddingBottom: 10 }}
+          renderItem={({ item, index }) => (
+            <View style={[styles.playerRow, isWatch && { padding: 8, marginBottom: 6, borderRadius: 10 }]}>
+              <View style={styles.playerInfo}>
+                {!isWatch && <Text style={styles.avatar}>{item.avatar}</Text>}
+                <TextInput
+                  style={[styles.playerInputName, isWatch && { fontSize: 13 }]}
+                  value={item.name}
+                  onChangeText={(text) => handleUpdatePlayerName(item.id, text)}
+                  placeholder={`Игрок ${index + 1}...`}
+                  placeholderTextColor="#6B7280"
+                />
+              </View>
+              <TouchableOpacity style={[styles.deleteButton, isWatch && { width: 26, height: 26 }]} onPress={() => handleRemovePlayer(item.id)}>
+                <Text style={{ color: '#fff', fontSize: isWatch ? 10 : 12 }}>❌</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.deleteButton} onPress={() => handleRemovePlayer(item.id)}>
-              <Text style={styles.deleteButtonText}>❌</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
-      </ScrollView>
-      <TouchableOpacity style={styles.startButton} onPress={handleStartGame}>
-        <Text style={styles.startButtonText}>Начать игру</Text>
-      </TouchableOpacity>
+          )}
+        />
 
+        <TouchableOpacity style={[styles.startButton, isWatch && { paddingVertical: 10, borderRadius: 10, marginBottom: 10 }]} onPress={handleStartGame}>
+          <Text style={[styles.startButtonText, isWatch && { fontSize: 14 }]}>Начать</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1C1E22', paddingTop: 50, paddingHorizontal: 20 },
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 25 },
+  container: { flex: 1, backgroundColor: '#1C1E22', alignItems: 'center' },
+  innerWrapper: { flex: 1, width: '100%' },
+  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   backButton: { backgroundColor: '#E5E7EB', width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  backArrow: { fontSize: 18, fontWeight: 'bold', color: '#000000' },
-  headerTitle: { color: '#ffffff', fontSize: 24, fontWeight: 'bold', marginLeft: 20 },
-  inputContainer: { flexDirection: 'row', marginBottom: 20, alignItems: 'center' },
-  input: { flex: 1, backgroundColor: '#D1D5DB', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 16, color: '#000000', fontSize: 16, marginRight: 10 },
+  backBtnWatch: { width: 30, height: 30, borderRadius: 8 },
+  backArrow: { fontSize: 18, fontWeight: 'bold', color: '#000' },
+  headerTitle: { color: '#fff', fontWeight: 'bold' },
+  inputContainer: { flexDirection: 'row', marginBottom: 16, alignItems: 'center', width: '100%', height: 50 },
+  input: { flex: 1, backgroundColor: '#D1D5DB', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14, color: '#000', fontSize: 16, marginRight: 8, height: '100%' },
   addButton: { backgroundColor: '#6C47FF', width: 50, height: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  addButtonText: { color: '#ffffff', fontSize: 24, fontWeight: 'bold' },
-  list: { paddingBottom: 20 },
-  playerRow: { flexDirection: 'row', backgroundColor: '#262930', borderRadius: 14, padding: 14, alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  playerInfo: { flexDirection: 'row', alignItems: 'center' },
-  avatar: { fontSize: 24, marginRight: 15 },
-  playerName: { color: '#ffffff', fontSize: 18, fontWeight: '500' },
-  deleteButton: { backgroundColor: '#fdfcfc', width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  deleteButtonText: { color: '#ffffff', fontSize: 12, fontWeight: 'bold' },
-  startButton: { backgroundColor: '#6C47FF', paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginBottom: 30 },
-  startButtonText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' }
+  addButtonText: { color: '#fff', fontSize: 24, fontWeight: 'bold' },
+  playerRow: { flexDirection: 'row', backgroundColor: '#262930', borderRadius: 14, padding: 14, alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  playerInfo: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 },
+  avatar: { fontSize: 24, marginRight: 12 },
+  playerInputName: { color: '#fff', fontSize: 16, fontWeight: '500', flex: 1, paddingVertical: 2 },
+  deleteButton: { backgroundColor: '#EF4444', width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  startButton: { backgroundColor: '#6C47FF', paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginBottom: 25, marginTop: 8 },
+  startButtonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' }
 });

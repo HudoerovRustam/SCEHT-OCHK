@@ -1,107 +1,98 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { useGameStore } from '../store/gameStore';
+import { useResponsive } from '../utils/responsive';
 
 export default function NewGameScreen({ navigation }) {
+  const store = useGameStore();
+  const { isWatch, paddingTop, paddingHorizontal, maxWidth, titleSize } = useResponsive();
+  
   const [gameName, setGameName] = useState('');
-  const [localCount, setLocalCount] = useState(4);
+  const [playersCount, setPlayersCount] = useState(4);
   const [isTimerMode, setIsTimerMode] = useState(false);
 
-  const store = useGameStore();
-  const setPlayersCount = store.setPlayersCount;
-
-  const handleMinus = () => {
-    if (localCount > 1) {
-      const nextCount = localCount - 1;
-      setLocalCount(nextCount);
-      if (typeof setPlayersCount === 'function') {
-        setPlayersCount(nextCount);
-      }
+  const handleContinue = () => {
+    if (!gameName || gameName.trim() === '') {
+      Alert.alert('Введите название', 'Пожалуйста, укажите название игры.');
+      return;
     }
-  };
-
-  const handlePlus = () => {
-    const nextCount = localCount + 1;
-    setLocalCount(nextCount);
-    if (typeof setPlayersCount === 'function') {
-      setPlayersCount(nextCount);
-    }
+    if (store?.setPlayersCount) store.setPlayersCount(playersCount);
+    navigation.navigate('Players', { gameName: gameName.trim(), isTimerMode });
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.backArrow}>❮</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Новая игра</Text>
-      </View>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.scrollContent, { paddingTop, paddingHorizontal }]} keyboardShouldPersistTaps="handled">
+      <View style={[styles.innerWrapper, { maxWidth }]}>
+        <View style={[styles.header, isWatch && { marginBottom: 12 }]}>
+          <TouchableOpacity style={[styles.backButton, isWatch && styles.backBtnWatch]} onPress={() => navigation.goBack()}>
+            <Text style={[styles.backArrow, isWatch && { fontSize: 14 }]}>❮</Text>
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { fontSize: titleSize, marginLeft: isWatch ? 10 : 20 }]}>Новая игра</Text>
+        </View>
 
-      <View style={styles.content}>
-
-        <Text style={styles.label}>Название игры</Text>
-        <TextInput 
-          style={styles.input} 
-          placeholder="Например: Игра" 
+        <Text style={[styles.label, isWatch && { fontSize: 12, marginBottom: 4 }]}>Название игры</Text>
+        <TextInput
+          style={[styles.input, isWatch && { paddingVertical: 8, fontSize: 13, marginBottom: 12 }]}
+          placeholder="Монополия"
           placeholderTextColor="#6B7280"
           value={gameName}
           onChangeText={setGameName}
         />
 
-        <Text style={styles.label}>Количество игроков</Text>
-        <View style={styles.counterContainer}>
-          <TouchableOpacity style={styles.counterButton} onPress={handleMinus}>
-            <Text style={styles.counterButtonText}>−</Text>
+        <Text style={[styles.label, isWatch && { fontSize: 12, marginBottom: 4 }]}>Игроков: {playersCount}</Text>
+        <View style={[styles.counterContainer, isWatch && { padding: 6, marginBottom: 12 }]}>
+          <TouchableOpacity style={[styles.counterButton, isWatch && styles.counterBtnWatch]} onPress={() => playersCount > 2 && setPlayersCount(playersCount - 1)}>
+            <Text style={styles.counterButtonText}>-</Text>
           </TouchableOpacity>
-          <Text style={styles.counterValue}>{localCount}</Text>
-          <TouchableOpacity style={styles.counterButton} onPress={handlePlus}>
+          <Text style={[styles.counterValue, isWatch && { fontSize: 16 }]}>{playersCount}</Text>
+          <TouchableOpacity style={[styles.counterButton, isWatch && styles.counterBtnWatch]} onPress={() => playersCount < 10 && setPlayersCount(playersCount + 1)}>
             <Text style={styles.counterButtonText}>+</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Режим подсчёта */}
-        <Text style={styles.label}>Режим подсчёта</Text>
-        <View style={styles.radioContainer}>
-          <TouchableOpacity style={styles.radioButton} onPress={() => setIsTimerMode(false)}>
-            <View style={[styles.radioCircle, !isTimerMode && styles.radioChecked]} />
-            <Text style={styles.radioText}>Обычный счёт</Text>
+        <Text style={[styles.label, isWatch && { fontSize: 12, marginBottom: 4 }]}>Режим</Text>
+        <View style={[styles.radioGroup, isWatch && { paddingHorizontal: 10, marginBottom: 15 }]}>
+          <TouchableOpacity style={[styles.radioRow, isWatch && { paddingVertical: 8 }]} onPress={() => setIsTimerMode(false)}>
+            <View style={[styles.radioCircle, !isTimerMode && styles.radioCircleSelected]} />
+            <Text style={[styles.radioText, isWatch && { fontSize: 12 }]}>Обычный</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.radioButton} onPress={() => setIsTimerMode(true)}>
-            <View style={[styles.radioCircle, isTimerMode && styles.radioChecked]} />
-            <Text style={styles.radioText}>Счет с таймером</Text>
+          <View style={styles.divider} />
+          <TouchableOpacity style={[styles.radioRow, isWatch && { paddingVertical: 8 }]} onPress={() => setIsTimerMode(true)}>
+            <View style={[styles.radioCircle, isTimerMode && styles.radioCircleSelected]} />
+            <Text style={[styles.radioText, isWatch && { fontSize: 12 }]}>С таймером</Text>
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity 
-          style={styles.submitButton}
-          onPress={() => navigation.navigate('Players', { playersCount: localCount, isTimerMode })}
-        >
-          <Text style={styles.submitButtonText}>Продолжить</Text>
+        <TouchableOpacity style={[styles.continueButton, isWatch && { paddingVertical: 10, borderRadius: 10 }]} onPress={handleContinue}>
+          <Text style={[styles.continueButtonText, isWatch && { fontSize: 14 }]}>Продолжить</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1C1E22', paddingTop: 50 },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, marginBottom: 30 },
+  container: { flex: 1, backgroundColor: '#1C1E22' },
+  scrollContent: { flexGrow: 1, paddingBottom: 30, alignItems: 'center' },
+  innerWrapper: { width: '100%' },
+  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 22 },
   backButton: { backgroundColor: '#E5E7EB', width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  backArrow: { fontSize: 18, fontWeight: 'bold', color: '#000000' },
-  headerTitle: { color: '#ffffff', fontSize: 24, fontWeight: 'bold', marginLeft: 20 },
-  content: { paddingHorizontal: 20, width: '100%' },
-  label: { color: '#ffffff', fontSize: 16, fontWeight: '600', marginBottom: 10, marginTop: 20 },
-  input: { backgroundColor: '#D1D5DB', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 16, color: '#000000', fontSize: 16 },
-  counterContainer: { flexDirection: 'row', backgroundColor: '#262930', borderRadius: 14, alignItems: 'center', justifyContent: 'space-between', padding: 6 },
+  backBtnWatch: { width: 30, height: 30, borderRadius: 8 },
+  backArrow: { fontSize: 18, fontWeight: 'bold', color: '#000' },
+  headerTitle: { color: '#fff', fontWeight: 'bold' },
+  label: { color: '#fff', fontSize: 15, fontWeight: '600', marginBottom: 8 },
+  input: { backgroundColor: '#D1D5DB', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 16, color: '#000', fontSize: 16, marginBottom: 20 },
+  counterContainer: { flexDirection: 'row', backgroundColor: '#262930', borderRadius: 14, padding: 10, alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   counterButton: { backgroundColor: '#374151', width: 44, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  counterButtonText: { color: '#ffffff', fontSize: 22, fontWeight: 'bold' },
-  counterValue: { color: '#ffffff', fontSize: 20, fontWeight: 'bold' },
-  radioContainer: { backgroundColor: '#262930', borderRadius: 14, overflow: 'hidden' },
-  radioButton: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#374151' },
-  radioCircle: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: '#9CA3AF', marginRight: 12, justifyContent: 'center', alignItems: 'center' },
-  radioChecked: { borderColor: '#6C47FF', backgroundColor: '#6C47FF' },
-  radioText: { color: '#ffffff', fontSize: 16 },
-  submitButton: { backgroundColor: '#6C47FF', paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginTop: 40 },
-  submitButtonText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' },
+  counterBtnWatch: { width: 32, height: 32, borderRadius: 8 },
+  counterButtonText: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
+  counterValue: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
+  radioGroup: { backgroundColor: '#262930', borderRadius: 14, paddingHorizontal: 16, marginBottom: 25 },
+  radioRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
+  radioCircle: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: '#6B7280', marginRight: 12 },
+  radioCircleSelected: { borderColor: '#6C47FF', backgroundColor: '#6C47FF' },
+  radioText: { color: '#fff', fontSize: 15 },
+  divider: { height: 1, backgroundColor: '#374151' },
+  continueButton: { backgroundColor: '#6C47FF', paddingVertical: 16, borderRadius: 14, alignItems: 'center' },
+  continueButtonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' }
 });

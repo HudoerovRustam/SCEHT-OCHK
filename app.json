@@ -1,5 +1,27 @@
 {
   "plugins": [
     "expo-status-bar"
-  ]
+  ],
+  "extra": {
+    "eas": {
+      "projectId": "45cad254-4e5f-45af-acb6-eece5b11eb85"
+    }
+  },
+  "expo": {
+    "android": {
+      "package": "com.hudoerov9.schetochka"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "45cad254-4e5f-45af-acb6-eece5b11eb85"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/45cad254-4e5f-45af-acb6-eece5b11eb85"
+    },
+    "ios": {}
+  }
 }

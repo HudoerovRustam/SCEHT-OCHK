@@ -1,56 +1,72 @@
 import React from 'react';
+import { Text, useWindowDimensions } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
 
 import HomeScreen from '../screens/HomeScreen';
+import BoardGamesScreen from '../screens/BoardGamesScreen';
 import HistoryScreen from '../screens/HistoryScreen';
+import RatingScreen from '../screens/RatingScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 
 const Tab = createBottomTabNavigator();
 
-const colors = {
-  PRIMARY: '#6C47FF',     
-  TEXT_MUTED: '#6B7280',  
-  TAB_BG: '#D1D5DB',      
-};
-
 export default function MainTabNavigator() {
+  const { width } = useWindowDimensions();
+  const isWatch = width < 280;
+
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
+      screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.PRIMARY,
-        tabBarInactiveTintColor: colors.TEXT_MUTED,
+        tabBarShowLabel: !isWatch,
         tabBarStyle: {
-          backgroundColor: colors.TAB_BG,
-          height: 64,
-          borderTopWidth: 0,
-          paddingBottom: 8,
-          paddingTop: 8,
+          backgroundColor: '#1C1E22',
+          borderTopColor: '#262930',
+          height: isWatch ? 42 : 65,
+          paddingBottom: isWatch ? 2 : 8,
+          paddingTop: isWatch ? 2 : 8,
         },
-      })}
+        tabBarActiveTintColor: '#6C47FF',
+        tabBarInactiveTintColor: '#A0A5B0',
+      }}
     >
       <Tab.Screen 
         name="Главная" 
         component={HomeScreen} 
         options={{
-          tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" size={size} color={color} />
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: isWatch ? 16 : 20, color }}>🏠</Text>,
+        }}
+      />
+      <Tab.Screen 
+        name="Настолки" 
+        component={BoardGamesScreen} 
+        options={{
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: isWatch ? 16 : 20, color }}>♟️</Text>,
         }}
       />
       <Tab.Screen 
         name="История" 
         component={HistoryScreen} 
         options={{
-          tabBarIcon: ({ color, size }) => <Ionicons name="time-outline" size={size} color={color} />
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: isWatch ? 16 : 20, color }}>🕒</Text>,
         }}
       />
       <Tab.Screen 
-        name="Настройки" 
-        component={SettingsScreen} 
+        name="Рейтинг" 
+        component={RatingScreen} 
         options={{
-          tabBarIcon: ({ color, size }) => <Ionicons name="settings-outline" size={size} color={color} />
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: isWatch ? 16 : 20, color }}>🏆</Text>,
         }}
       />
+      {!isWatch && (
+        <Tab.Screen 
+          name="Настройки" 
+          component={SettingsScreen} 
+          options={{
+            tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>⚙️</Text>,
+          }}
+        />
+      )}
     </Tab.Navigator>
   );
 }
