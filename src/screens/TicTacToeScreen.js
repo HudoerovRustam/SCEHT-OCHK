@@ -5,11 +5,10 @@ import { useGameStore } from '../store/gameStore';
 const BOARD_SIZE = Dimensions.get('window').width - 60;
 const CELL_SIZE = BOARD_SIZE / 3;
 
-// Все 8 выигрышных комбинаций (заданы строками для защиты от обрезки при копировании)
 const WINNING_LINES = [
-  '0,1,2', '3,4,5', '6,7,8', // Горизонтали
-  '0,3,6', '1,4,7', '2,5,8', // Вертикали
-  '0,4,8', '2,4,6'           // Диагонали
+  '0,1,2', '3,4,5', '6,7,8',
+  '0,3,6', '1,4,7', '2,5,8',
+  '0,4,8', '2,4,6'
 ];
 
 export default function TicTacToeScreen({ route, navigation }) {
@@ -130,11 +129,25 @@ const styles = StyleSheet.create({
   headerTitle: { color: '#fff', fontSize: 22, fontWeight: 'bold', marginLeft: 16 },
   turnBanner: { backgroundColor: '#262930', paddingVertical: 12, borderRadius: 12, alignItems: 'center', marginBottom: 30, borderWidth: 1, borderColor: '#6C47FF' },
   turnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  board: { width: BOARD_SIZE, height: BOARD_SIZE, alignSelf: 'center', flexDirection: 'row', flexWrap: 'wrap', backgroundColor: '#374151', borderRadius: 12, overflow: 'hidden', borderWidth: 2, borderColor: '#374151', marginBottom: 30 },
-  cell: { width: CELL_SIZE - 1.5, height: CELL_SIZE - 1.5, backgroundColor: '#262930', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#374151' },
-  symbolText: { fontSize: CELL_SIZE * 0.48 },
-  xColor: { color: '#EF4444' },
-  oColor: { color: '#10B981' },
+  board: { width: BOARD_SIZE, height: BOARD_SIZE, alignSelf: 'center', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignContent: 'space-between', marginBottom: 30 },
+  cell: {
+    width: CELL_SIZE - 8,
+    height: CELL_SIZE - 8,
+    backgroundColor: '#262930',
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#374151',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  symbolText: { fontSize: CELL_SIZE * 0.45, fontWeight: 'bold' },
+  xColor: { color: '#F43F5E', textShadowColor: 'rgba(244, 63, 94, 0.7)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 12 },
+  oColor: { color: '#10B981', textShadowColor: 'rgba(16, 185, 129, 0.7)', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 12 },
   controls: { gap: 10 },
   resetBtn: { backgroundColor: '#6C47FF', paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
   resetBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' }

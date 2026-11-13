@@ -4,10 +4,12 @@ import NetInfo from '@react-native-community/netinfo';
 import { apiService } from '../services/api';
 import { useGameStore } from '../store/gameStore';
 
-export default function HistoryScreen() {
+export default function HistoryScreen({ navigation }) {
   const store = useGameStore();
+  const currentUserEmail = store?.user?.email || '';
+
   const [cloudGames, setCloudGames] = useState([]);
-  const [leaderboard, setLeaderboard] = useState([]);
+  const [filterMode, setFilterMode] = useState('mine');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
@@ -17,25 +19,15 @@ export default function HistoryScreen() {
     else setIsLoading(true);
 
     try {
-      const validatedGames = await apiService.getGames(20, 'desc');
-      setCloudGames(validatedGames);
-      if (store) store.games = validatedGames;
-
-      // Считаем рейтинг побед
-      const winsMap = {};
-      validatedGames.forEach(game => {
-        const name = game.winner;
-        if (name && name !== 'Не определен' && name !== 'Ничья') {
-          winsMap[name] = (winsMap[name] || 0) + 1;
-        }
-      });
-
-      const sortedRating = Object.keys(winsMap)
-        .map(name => ({ name, wins: winsMap[name] }))
-        .sort((a, b) => b.wins - a.wins);
-
-      setLeaderboard(sortedRating);
+      const netState = await NetInfo.fetch();
+      if (!netState.isConnected) {
+        setIsOnline(false);
+        return;
+      }
       setIsOnline(true);
+
+      const allGames = await apiService.getGames();
+      setCloudGames(allGames);
     } catch (error) {
       setIsOnline(false);
     } finally {
@@ -45,30 +37,32 @@ export default function HistoryScreen() {
   };
 
   useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener(state => {
-      setIsOnline(!!state.isConnected);
-      if (state.isConnected) {
-        loadCloudHistory(false);
-      }
-    });
-
     loadCloudHistory(false);
-    return () => unsubscribe();
   }, []);
 
-  const handleDeleteGame = async (id) => {
-    setCloudGames(prev => prev.filter(g => g.id !== id));
+  const handleDeleteGame = async (item) => {
+    if (item.user_email !== currentUserEmail) return;
+
+    setCloudGames(prev => prev.filter(g => g.id !== item.id));
     if (store && typeof store.removeGame === 'function') {
-      await store.removeGame(id);
+      await store.removeGame(item.id);
     }
-    loadCloudHistory(true);
   };
+
+  const handleLogout = async () => {
+    await store.setUser(null);
+    navigation.replace('Login');
+  };
+
+  const displayedGames = filterMode === 'mine' 
+    ? cloudGames.filter(g => g.user_email === currentUserEmail) 
+    : cloudGames;
 
   if (isLoading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#6C47FF" />
-        <Text style={styles.loadingText}>Загрузка рейтинга из Supabase...</Text>
+        <Text style={styles.loadingText}>Загрузка истории...</Text>
       </View>
     );
   }
@@ -88,37 +82,54 @@ export default function HistoryScreen() {
 
   return (
     <View style={styles.container}>
-      {leaderboard.length > 0 && (
-        <View style={styles.ratingBox}>
-          <Text style={styles.ratingHeader}>🏆 Рейтинг игроков (Supabase)</Text>
-          {leaderboard.map((player, index) => (
-            <View key={player.name} style={styles.ratingRow}>
-              <Text style={styles.ratingName}>
-                {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '👤'} {player.name}
-              </Text>
-              <Text style={styles.ratingWins}>Побед: {player.wins}</Text>
-            </View>
-          ))}
-        </View>
-      )}
+      <View style={styles.accountBar}>
+        <Text style={styles.accountEmail} numberOfLines={1}>👤 {currentUserEmail || 'Гость'}</Text>
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+          <Text style={styles.logoutText}>Выйти</Text>
+        </TouchableOpacity>
+      </View>
 
-      <Text style={styles.headerTitle}>История игр </Text>
+      <Text style={styles.headerTitle}>История игр</Text>
+
+      <View style={styles.filterRow}>
+        <TouchableOpacity 
+          style={[styles.filterBtn, filterMode === 'mine' && styles.filterBtnActive]} 
+          onPress={() => setFilterMode('mine')}
+        >
+          <Text style={[styles.filterText, filterMode === 'mine' && styles.filterTextActive]}>Мои партии</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.filterBtn, filterMode === 'all' && styles.filterBtnActive]} 
+          onPress={() => setFilterMode('all')}
+        >
+          <Text style={[styles.filterText, filterMode === 'all' && styles.filterTextActive]}>Общая лента</Text>
+        </TouchableOpacity>
+      </View>
       
       <FlatList
-        data={cloudGames}
+        data={displayedGames}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.gameCard}>
-            <View style={{ flex: 1, paddingRight: 10 }}>
-              <Text style={styles.gameTitle}>{item.title}</Text>
-              <Text style={styles.gameInfo}>{item.date} • Победитель: {item.winner}</Text>
-              <Text style={styles.gameStatus}>Сохранено в Supabase ✅</Text>
+        renderItem={({ item }) => {
+          const isMyGame = item.user_email === currentUserEmail;
+
+          return (
+            <View style={styles.gameCard}>
+              <View style={{ flex: 1, paddingRight: 10 }}>
+                <Text style={styles.gameTitle}>{item.title}</Text>
+                <Text style={styles.gameInfo}>{item.date} • Победитель: {item.winner}</Text>
+                <Text style={styles.ownerText}>
+                  {isMyGame ? '✅ Ваша партия' : `🔒 Игрок: ${item.user_email || 'Аноним'}`}
+                </Text>
+              </View>
+
+              {isMyGame && (
+                <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDeleteGame(item)}>
+                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>❌</Text>
+                </TouchableOpacity>
+              )}
             </View>
-            <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDeleteGame(item.id)}>
-              <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>❌</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+          );
+        }}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -129,7 +140,9 @@ export default function HistoryScreen() {
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>В облаке пока нет партий. Сыграйте матч!</Text>
+            <Text style={styles.emptyText}>
+              {filterMode === 'mine' ? 'На вашем аккаунте пока нет сыгранных партий.' : 'В облаке пока нет игр.'}
+            </Text>
           </View>
         }
       />
@@ -139,24 +152,28 @@ export default function HistoryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1C1E22', paddingTop: 50, paddingHorizontal: 20 },
-  headerTitle: { color: '#ffffff', fontSize: 22, fontWeight: 'bold', marginBottom: 15, marginTop: 10 },
-  center: { flex: 1, backgroundColor: '#1C1E22', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
-  loadingText: { color: '#ffffff', marginTop: 10, fontSize: 16 },
-  ratingBox: { backgroundColor: '#262930', borderRadius: 16, padding: 16, marginBottom: 15, borderWidth: 1, borderColor: '#6C47FF' },
-  ratingHeader: { color: '#ffffff', fontSize: 18, fontWeight: 'bold', marginBottom: 12 },
-  ratingRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#374151' },
-  ratingName: { color: '#E5E7EB', fontSize: 16, fontWeight: '600' },
-  ratingWins: { color: '#22C55E', fontSize: 16, fontWeight: 'bold' },
-  errorIcon: { fontSize: 60, marginBottom: 15 },
-  errorText: { color: '#EF4444', fontSize: 24, fontWeight: 'bold', marginBottom: 10, textAlign: 'center' },
-  errorSubText: { color: '#A0A5B0', fontSize: 15, textAlign: 'center', marginBottom: 25, lineHeight: 22 },
-  retryButton: { backgroundColor: '#6C47FF', paddingVertical: 14, paddingHorizontal: 24, borderRadius: 12 },
-  retryButtonText: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
+  accountBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#262930', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, marginBottom: 15 },
+  accountEmail: { color: '#E5E7EB', fontSize: 14, fontWeight: '600', flex: 1, marginRight: 10 },
+  logoutBtn: { backgroundColor: '#374151', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  logoutText: { color: '#EF4444', fontSize: 13, fontWeight: 'bold' },
+  headerTitle: { color: '#ffffff', fontSize: 26, fontWeight: 'bold', marginBottom: 15 },
+  filterRow: { flexDirection: 'row', gap: 10, marginBottom: 15 },
+  filterBtn: { flex: 1, backgroundColor: '#262930', paddingVertical: 10, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: '#374151' },
+  filterBtnActive: { backgroundColor: '#6C47FF', borderColor: '#6C47FF' },
+  filterText: { color: '#A0A5B0', fontSize: 14, fontWeight: '600' },
+  filterTextActive: { color: '#ffffff', fontWeight: 'bold' },
   gameCard: { flexDirection: 'row', backgroundColor: '#262930', borderRadius: 14, padding: 16, marginBottom: 12, justifyContent: 'space-between', alignItems: 'center' },
   gameTitle: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' },
   gameInfo: { color: '#A0A5B0', fontSize: 14, marginTop: 4 },
-  gameStatus: { color: '#10B981', fontSize: 12, fontWeight: '600', marginTop: 4 },
+  ownerText: { color: '#10B981', fontSize: 12, fontWeight: '600', marginTop: 4 },
   deleteBtn: { backgroundColor: '#EF4444', width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  center: { flex: 1, backgroundColor: '#1C1E22', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
+  loadingText: { color: '#ffffff', marginTop: 10, fontSize: 16 },
+  errorIcon: { fontSize: 60, marginBottom: 15 },
+  errorText: { color: '#EF4444', fontSize: 24, fontWeight: 'bold', marginBottom: 10, textAlign: 'center' },
+  errorSubText: { color: '#A0A5B0', fontSize: 15, textAlign: 'center', marginBottom: 25 },
+  retryButton: { backgroundColor: '#6C47FF', paddingVertical: 14, paddingHorizontal: 24, borderRadius: 12 },
+  retryButtonText: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
   emptyContainer: { alignItems: 'center', marginTop: 60 },
   emptyText: { color: '#A0A5B0', fontSize: 16, textAlign: 'center' }
 });

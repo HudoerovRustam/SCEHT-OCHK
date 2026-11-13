@@ -2,7 +2,8 @@ export const API_CONFIG = {
   BASE_URL: 'https://bedztctblcntzxnofiqs.supabase.co/rest/v1/',
   API_KEY: 'sb_publishable_vKcPgCSwcyK0MCZZKXNmqg_EGmIVouo',
   ENDPOINTS: {
-    GAMES_LIST: '/games'
+    GAMES_LIST: '/games',
+    USERS_LIST: '/users'
   }
 };
 
@@ -12,53 +13,86 @@ const getHeaders = () => ({
   'Content-Type': 'application/json'
 });
 
-export const apiService = {
-  // Получение ВСЕХ игр из Supabase без ограничения лимита
-  getGames: async () => {
-    const queryParams = `?select=*&order=created_at.desc`;
-    const url = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.GAMES_LIST}${queryParams}`;
+export const authService = {
+  signUp: async (email, password) => {
+    const checkUrl = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.USERS_LIST}?email=eq.${encodeURIComponent(email)}&select=*`;
+    const checkRes = await fetch(checkUrl, { method: 'GET', headers: getHeaders() });
+    
+    if (!checkRes.ok) {
+      throw new Error(`Ошибка проверки базы: ${checkRes.status}`);
+    }
+    
+    const existingUsers = await checkRes.json();
+    if (Array.isArray(existingUsers) && existingUsers.length > 0) {
+      throw new Error('Пользователь с такой почтой уже зарегистрирован');
+    }
 
+    const createUrl = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.USERS_LIST}`;
+    const createRes = await fetch(createUrl, {
+      method: 'POST',
+      headers: {
+        ...getHeaders(),
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify({ email, password })
+    });
+
+    if (!createRes.ok) {
+      throw new Error(`Ошибка регистрации: ${createRes.status}`);
+    }
+
+    const created = await createRes.json();
+    return Array.isArray(created) ? created.at(0) : { email };
+  },
+
+  signIn: async (email, password) => {
+    const url = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.USERS_LIST}?email=eq.${encodeURIComponent(email)}&select=*`;
+    const response = await fetch(url, { method: 'GET', headers: getHeaders() });
+
+    if (!response.ok) {
+      throw new Error(`Ошибка связи с базой: ${response.status}`);
+    }
+
+    const users = await response.json();
+    if (!Array.isArray(users) || users.length === 0) {
+      throw new Error('Аккаунт с такой почтой не найден');
+    }
+
+    const user = users.at(0);
+    if (user.password !== password) {
+      throw new Error('Неверный пароль');
+    }
+
+    return user;
+  }
+};
+
+export const apiService = {
+  getGames: async () => {
+    const url = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.GAMES_LIST}?select=*&order=created_at.desc`;
     const response = await fetch(url, {
       method: 'GET',
       headers: getHeaders()
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.log('ОШИБКА ЧТЕНИЯ SUPABASE:', response.status, errorText);
-      throw new Error(`Ошибка сети Supabase! Статус: ${response.status}`);
+      throw new Error(`Ошибка сети Supabase: ${response.status}`);
     }
 
     const json = await response.json();
+    if (!Array.isArray(json)) return [];
 
-    if (!Array.isArray(json)) {
-      throw new Error("Неверная структура данных: ожидался массив");
-    }
-
-    return json.map((item, index) => {
-      const validId = item.id ? item.id.toString() : `raw-${index}`;
-      const validTitle = item.title && typeof item.title === 'string' 
-        ? item.title 
-        : `Партия #${validId}`;
-      const validWinner = item.winner && typeof item.winner === 'string'
-        ? item.winner
-        : 'Не определен';
-      const validDate = item.created_at 
-        ? new Date(item.created_at).toLocaleDateString('ru-RU') 
-        : new Date().toLocaleDateString('ru-RU');
-
-      return {
-        id: validId,
-        title: validTitle.length > 25 ? `${validTitle.slice(0, 22)}...` : validTitle,
-        date: validDate,
-        winner: validWinner,
-        status: 'Finished'
-      };
-    });
+    return json.map((item, index) => ({
+      id: item.id ? item.id.toString() : `raw-${index}`,
+      title: item.title || 'Партия',
+      winner: item.winner || 'Не определен',
+      user_email: item.user_email || '',
+      date: item.created_at ? new Date(item.created_at).toLocaleDateString('ru-RU') : 'Сегодня',
+      status: 'Finished'
+    }));
   },
 
-  // Сохранение новой сыгранной партии в таблицу Supabase (POST)
-  createGame: async (title, winner) => {
+  createGame: async (title, winner, userEmail) => {
     const url = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.GAMES_LIST}`;
     const response = await fetch(url, {
       method: 'POST',
@@ -66,21 +100,21 @@ export const apiService = {
         ...getHeaders(),
         'Prefer': 'return=minimal'
       },
-      body: JSON.stringify({ title, winner })
+      body: JSON.stringify({ 
+        title, 
+        winner, 
+        user_email: userEmail 
+      })
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.log('ОШИБКА ЗАПИСИ В SUPABASE:', response.status, errorText);
-      throw new Error(`Ошибка сохранения в Supabase: ${response.status}`);
-    } else {
-      console.log('УСПЕШНО ОТПРАВЛЕНО В SUPABASE!');
+      throw new Error(`Ошибка сохранения: ${response.status}`);
     }
   },
 
-  // Удаление партии из Supabase по ID (DELETE)
-  deleteGame: async (id) => {
-    const url = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.GAMES_LIST}?id=eq.${id}`;
+  deleteGame: async (id, userEmail) => {
+    if (!userEmail) return;
+    const url = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.GAMES_LIST}?id=eq.${id}&user_email=eq.${encodeURIComponent(userEmail)}`;
     await fetch(url, {
       method: 'DELETE',
       headers: getHeaders()

@@ -1,26 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, Keyboard } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, Keyboard, Alert } from 'react-native';
 import { useGameStore } from '../store/gameStore';
 
 export default function PlayersScreen({ route, navigation }) {
   const store = useGameStore();
-  
-  // НАДЁЖНЫЙ ПРИЁМ ПАРАМЕТРОВ: Вытаскиваем сразу все настройки из NewGameScreen
   const { gameName, isTimerMode } = route.params || { gameName: 'Игра', isTimerMode: false };
   
   const [playerName, setPlayerName] = useState('');
   const [localPlayers, setLocalPlayers] = useState([]);
 
-  // Синхронизируем данные с глобальным стором при открытии экрана
   useEffect(() => {
     if (store && store.activePlayers) {
       setLocalPlayers(store.activePlayers);
     }
   }, [store?.activePlayers]);
 
-  // Функция добавления нового персонажа (Плюс)
   const handleAddPlayer = () => {
-    if (playerName.trim() === '') return;
+    if (playerName.trim() === '') {
+      Alert.alert('Пустое имя', 'Введите имя игрока перед добавлением в список.');
+      return;
+    }
 
     const avatars = ['🏃', '🎯', '🎲', '🐷', '🦄', '🦁', '🦊', '🐱'];
     const newPlayer = {
@@ -38,7 +37,6 @@ export default function PlayersScreen({ route, navigation }) {
     Keyboard.dismiss();
   };
 
-  // Изменение имени прямо внутри карточки игрока
   const handleUpdatePlayerName = (id, newText) => {
     const updated = localPlayers.map(player => {
       if (player.id === id) {
@@ -51,19 +49,34 @@ export default function PlayersScreen({ route, navigation }) {
     if (store) store.activePlayers = updated;
   };
 
-  // Функция удаления персонажа (Крестик)
   const handleRemovePlayer = (id) => {
     const updated = localPlayers.filter(p => p.id !== id);
     setLocalPlayers(updated);
     if (store) store.activePlayers = updated;
   };
 
-  // ФИКС ФУНКЦИИ ПЕРЕХОДА: Передаем флаг, который вытащили на строке 9
   const handleStartGame = () => {
-    if (store) {
-      store.activePlayers = localPlayers.map(p => ({ ...p, score: 0 }));
+    if (localPlayers.length < 2) {
+      Alert.alert('Мало игроков', 'Для начала игры необходимо минимум 2 участника.');
+      return;
     }
-    // Передаем параметры на игровой экран матча
+
+    const hasEmptyNames = localPlayers.some(player => !player.name || player.name.trim() === '');
+    if (hasEmptyNames) {
+      Alert.alert('Заполните имена', 'Пожалуйста, обязательно введите имена всех игроков перед началом партии.');
+      return;
+    }
+
+    const cleanedPlayers = localPlayers.map(p => ({
+      ...p,
+      name: p.name.trim(),
+      score: 0
+    }));
+
+    if (store) {
+      store.activePlayers = cleanedPlayers;
+    }
+
     navigation.navigate('Game', { 
       gameName: gameName, 
       isTimerMode: isTimerMode 
@@ -82,7 +95,7 @@ export default function PlayersScreen({ route, navigation }) {
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
-          placeholder="Впишите ещё игрока..."
+          placeholder="Добавить ещё игрока..."
           placeholderTextColor="#6B7280"
           value={playerName}
           onChangeText={setPlayerName}
@@ -95,7 +108,7 @@ export default function PlayersScreen({ route, navigation }) {
       <FlatList
         data={localPlayers}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
           <View style={styles.playerRow}>
             <View style={styles.playerInfo}>
               <Text style={styles.avatar}>{item.avatar}</Text>
@@ -103,8 +116,8 @@ export default function PlayersScreen({ route, navigation }) {
                 style={styles.playerInputName}
                 value={item.name}
                 onChangeText={(text) => handleUpdatePlayerName(item.id, text)}
-                placeholder="Имя игрока"
-                placeholderTextColor="#A0A5B0"
+                placeholder={`Введите имя игрока ${index + 1}...`}
+                placeholderTextColor="#6B7280"
               />
             </View>
             
@@ -135,7 +148,7 @@ const styles = StyleSheet.create({
   playerRow: { flexDirection: 'row', backgroundColor: '#262930', borderRadius: 14, padding: 14, alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   playerInfo: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 10 },
   avatar: { fontSize: 24, marginRight: 15 },
-  playerInputName: { color: '#ffffff', fontSize: 18, fontWeight: '500', flex: 1, paddingVertical: 2 },
+  playerInputName: { color: '#ffffff', fontSize: 17, fontWeight: '500', flex: 1, paddingVertical: 4 },
   deleteButton: { backgroundColor: '#ffffff', width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   deleteButtonText: { color: '#ffffff', fontSize: 12, fontWeight: 'bold' },
   startButton: { backgroundColor: '#6C47FF', paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginBottom: 30 },
