@@ -1,27 +1,24 @@
 {
-  "plugins": [
-    "expo-status-bar"
-  ],
-  "extra": {
-    "eas": {
-      "projectId": "45cad254-4e5f-45af-acb6-eece5b11eb85"
-    }
-  },
   "expo": {
-    "android": {
-      "package": "com.hudoerov9.schetochka"
+    "name": "Игро Счёт",
+    "slug": "schetochka",
+    "version": "1.0.0",
+    "orientation": "default",
+    "newArchEnabled": false,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.hudoerov9.schetochka",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "extra": {
       "eas": {
         "projectId": "45cad254-4e5f-45af-acb6-eece5b11eb85"
       }
     },
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
-    "updates": {
-      "url": "https://u.expo.dev/45cad254-4e5f-45af-acb6-eece5b11eb85"
-    },
-    "ios": {}
+    "plugins": [
+      "expo-status-bar"
+    ]
   }
 }
