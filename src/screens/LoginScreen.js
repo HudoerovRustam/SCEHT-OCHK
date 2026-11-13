@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
+import { StyleSheet, View, Text, TouchableOpacity, Alert, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { colors } from '../constants/constant';
 import AppInput from '../components/AppInput';
 import AppButton from '../components/AppButton';
 import { authService } from '../services/api';
 import { useGameStore } from '../store/gameStore';
+import { useResponsive } from '../utils/responsive';
 
 export default function LoginScreen({ navigation }) {
   const store = useGameStore();
+  const { isWatch, paddingHorizontal } = useResponsive();
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,7 +18,7 @@ export default function LoginScreen({ navigation }) {
   const handleAuth = async () => {
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail || !password) {
-      Alert.alert('Внимание', 'Введите почту (логин) и пароль.');
+      Alert.alert('Внимание', 'Введите почту и пароль.');
       return;
     }
     if (password.length < 6) {
@@ -30,23 +31,15 @@ export default function LoginScreen({ navigation }) {
       let authData;
       if (isRegisterMode) {
         authData = await authService.signUp(cleanEmail, password);
-        Alert.alert('Аккаунт создан! 🎉', 'Вы успешно зарегистрировались в системе.');
+        Alert.alert('Аккаунт создан! 🎉', 'Вы успешно зарегистрировались.');
       } else {
         authData = await authService.signIn(cleanEmail, password);
       }
 
-      const userProfile = {
-        email: cleanEmail,
-        token: authData.access_token || null
-      };
-
       if (store && typeof store.setUser === 'function') {
-        await store.setUser(userProfile);
+        await store.setUser({ email: cleanEmail, token: authData.access_token || null });
       }
-
-      if (navigation && typeof navigation.replace === 'function') {
-        navigation.replace('MainTabs');
-      }
+      navigation.replace('MainTabs');
     } catch (error) {
       Alert.alert('Ошибка входа', error.message);
     } finally {
@@ -55,91 +48,49 @@ export default function LoginScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.container}>
-        <View style={styles.formContainer}>
-          <View style={styles.imagePlaceholder}>
-            <Text style={{ fontSize: 80 }}>🎲</Text>
-            <Text style={styles.titleText}>
-              {isRegisterMode ? 'Регистрация' : 'Вход в аккаунт'}
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingHorizontal }]} keyboardShouldPersistTaps="handled">
+        <View style={styles.innerWrapper}>
+          <View style={[styles.imagePlaceholder, isWatch && { marginBottom: 10 }]}>
+            <Text style={{ fontSize: isWatch ? 40 : 72 }}>🎲</Text>
+            <Text style={[styles.titleText, isWatch && { fontSize: 16, marginTop: 4 }]}>
+              {isRegisterMode ? 'Регистрация' : 'Вход'}
             </Text>
           </View>
 
-          <AppInput
-            label="Электронная почта (Email)"
-            placeholder="example@mail.ru"
-            value={email}
-            onChangeText={setEmail}
-          />
-
-          <AppInput
-            label="Пароль"
-            placeholder="Минимум 6 символов"
-            value={password}
-            onChangeText={setPassword}
-            isPassword={true}
-          />
+          <AppInput label={isWatch ? '' : 'Email'} placeholder="example@mail.ru" value={email} onChangeText={setEmail} />
+          <AppInput label={isWatch ? '' : 'Пароль'} placeholder="Пароль (от 6 симв.)" value={password} onChangeText={setPassword} isPassword={true} />
 
           {loading ? (
-            <ActivityIndicator size="large" color="#6C47FF" style={{ marginTop: 20 }} />
+            <ActivityIndicator size="large" color="#6C47FF" style={{ marginTop: 15 }} />
           ) : (
             <AppButton
-              title={isRegisterMode ? 'Создать аккаунт' : 'Войти'}
+              title={isRegisterMode ? 'Создать' : 'Войти'}
               variant="primary"
-              size="md"
+              size={isWatch ? 'sm' : 'md'}
               onPress={handleAuth}
               style={styles.button}
             />
           )}
 
-          <TouchableOpacity 
-            style={styles.switchBtn} 
-            onPress={() => setIsRegisterMode(!isRegisterMode)}
-            disabled={loading}
-          >
-            <Text style={styles.switchText}>
-              {isRegisterMode 
-                ? 'Уже есть аккаунт? Войти' 
-                : 'Нет аккаунта? Зарегистрироваться'}
+          <TouchableOpacity style={styles.switchBtn} onPress={() => setIsRegisterMode(!isRegisterMode)} disabled={loading}>
+            <Text style={[styles.switchText, isWatch && { fontSize: 11 }]}>
+              {isRegisterMode ? 'Есть аккаунт? Войти' : 'Регистрация'}
             </Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
-    </SafeAreaProvider>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.BACKGROUND || '#1C1E22',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  formContainer: {
-    width: '100%',
-  },
-  imagePlaceholder: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 25,
-  },
-  titleText: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 10,
-  },
-  button: {
-    marginTop: 15,
-  },
-  switchBtn: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  switchText: {
-    color: '#A0A5B0',
-    fontSize: 15,
-    fontWeight: '600',
-  },
+  container: { flex: 1, backgroundColor: colors?.BACKGROUND || '#1C1E22' },
+  scrollContent: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 25 },
+  innerWrapper: { width: '100%', maxWidth: 460 },
+  imagePlaceholder: { alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  titleText: { color: '#FFFFFF', fontSize: 24, fontWeight: 'bold', marginTop: 10 },
+  button: { marginTop: 12 },
+  switchBtn: { marginTop: 15, alignItems: 'center' },
+  switchText: { color: '#A0A5B0', fontSize: 15, fontWeight: '600' },
 });

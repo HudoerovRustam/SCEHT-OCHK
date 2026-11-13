@@ -121,3 +121,65 @@ export const apiService = {
     });
   }
 };
+export const roomService = {
+  createRoom: async (gameType, player1, initialBoard) => {
+    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    const url = `${API_CONFIG.BASE_URL}/rooms`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { ...getHeaders(), 'Prefer': 'return=representation' },
+      body: JSON.stringify({
+        code,
+        game_type: gameType,
+        player1,
+        player2: '',
+        board_state: JSON.stringify(initialBoard),
+        turn: 'white',
+        winner: ''
+      })
+    });
+    if (!response.ok) throw new Error('Не удалось создать онлайн-комнату');
+    const data = await response.json();
+    return Array.isArray(data) ? data.at(0) : data;
+  },
+
+  joinRoom: async (code, player2) => {
+    const findUrl = `${API_CONFIG.BASE_URL}/rooms?code=eq.${code.trim()}&select=*`;
+    const findRes = await fetch(findUrl, { method: 'GET', headers: getHeaders() });
+    const rooms = await findRes.json();
+    
+    if (!Array.isArray(rooms) || rooms.length === 0) {
+      throw new Error('Комната с таким кодом не найдена');
+    }
+    
+    const room = rooms.at(0);
+    const updateUrl = `${API_CONFIG.BASE_URL}/rooms?id=eq.${room.id}`;
+    const updateRes = await fetch(updateUrl, {
+      method: 'PATCH',
+      headers: { ...getHeaders(), 'Prefer': 'return=representation' },
+      body: JSON.stringify({ player2 })
+    });
+    const updated = await updateRes.json();
+    return Array.isArray(updated) ? updated.at(0) : room;
+  },
+
+  getRoom: async (id) => {
+    const url = `${API_CONFIG.BASE_URL}/rooms?id=eq.${id}&select=*`;
+    const res = await fetch(url, { method: 'GET', headers: getHeaders() });
+    const data = await res.json();
+    return Array.isArray(data) ? data.at(0) : null;
+  },
+
+  updateMove: async (id, boardState, nextTurn, winner = '') => {
+    const url = `${API_CONFIG.BASE_URL}/rooms?id=eq.${id}`;
+    await fetch(url, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify({
+        board_state: JSON.stringify(boardState),
+        turn: nextTurn,
+        winner
+      })
+    });
+  }
+};

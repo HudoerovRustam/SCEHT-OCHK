@@ -1,9 +1,7 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Alert, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, Alert, useWindowDimensions, ScrollView } from 'react-native';
 import { useGameStore } from '../store/gameStore';
-
-const BOARD_SIZE = Dimensions.get('window').width - 36;
-const SQUARE_SIZE = BOARD_SIZE / 8;
+import { roomService } from '../services/api';
 
 const INITIAL_BOARD = [
   ['♜', '♞', '♝', '♛', '♚', '♝', '♞', '♜'],
@@ -17,18 +15,8 @@ const INITIAL_BOARD = [
 ];
 
 const FILLED_GLYPHS = {
-  '♙': '♟\uFE0E',
-  '♖': '♜\uFE0E',
-  '♘': '♞\uFE0E',
-  '♗': '♝\uFE0E',
-  '♕': '♛\uFE0E',
-  '♔': '♚\uFE0E',
-  '♟': '♟\uFE0E',
-  '♜': '♜\uFE0E',
-  '♞': '♞\uFE0E',
-  '♝': '♝\uFE0E',
-  '♛': '♛\uFE0E',
-  '♚': '♚\uFE0E',
+  '♙': '♟\uFE0E', '♖': '♜\uFE0E', '♘': '♞\uFE0E', '♗': '♝\uFE0E', '♕': '♛\uFE0E', '♔': '♚\uFE0E',
+  '♟': '♟\uFE0E', '♜': '♜\uFE0E', '♞': '♞\uFE0E', '♝': '♝\uFE0E', '♛': '♛\uFE0E', '♚': '♚\uFE0E',
 };
 
 const isWhite = (p) => ['♙', '♖', '♘', '♗', '♕', '♔'].includes(p);
@@ -92,17 +80,48 @@ const isValidChessMove = (board, r1, c1, r2, c2) => {
 
 export default function ChessGameScreen({ route, navigation }) {
   const store = useGameStore();
-  const { player1 = 'Белые', player2 = 'Чёрные' } = route.params || {};
+  const { width, height } = useWindowDimensions();
+  const { mode = 'local', roomId, roomCode, myRole, player1 = 'Белые', player2 = 'Чёрные' } = route.params || {};
+
+  const boardSize = Math.min(width - 36, height * 0.52, 460);
+  const squareSize = boardSize / 8;
 
   const [board, setBoard] = useState(INITIAL_BOARD);
   const [selected, setSelected] = useState(null);
   const [validMoves, setValidMoves] = useState([]);
   const [turn, setTurn] = useState('white');
+  const [p2Name, setP2Name] = useState(player2);
   const [isFinished, setIsFinished] = useState(false);
 
-  const finishAndSave = async (winnerName) => {
+  useEffect(() => {
+    if (mode !== 'online' || !roomId || isFinished) return;
+
+    const timer = setInterval(async () => {
+      try {
+        const room = await roomService.getRoom(roomId);
+        if (!room) return;
+        if (room.player2) setP2Name(room.player2);
+        if (room.board_state) setBoard(JSON.parse(room.board_state));
+        if (room.turn) setTurn(room.turn);
+
+        if (room.winner && !isFinished) {
+          setIsFinished(true);
+          Alert.alert('Партия завершена! 🏆', `Победитель: ${room.winner}`, [
+            { text: 'ОК', onPress: () => navigation.goBack() }
+          ]);
+        }
+      } catch (e) {}
+    }, 2000);
+
+    return () => clearInterval(timer);
+  }, [mode, roomId, isFinished]);
+
+  const finishAndSave = async (winnerName, finalBoard = board) => {
     setIsFinished(true);
     try {
+      if (mode === 'online' && roomId) {
+        await roomService.updateMove(roomId, finalBoard, turn, winnerName);
+      }
       if (store?.addGame) {
         await store.addGame({ title: 'Шахматы', winner: winnerName });
       }
@@ -119,16 +138,16 @@ export default function ChessGameScreen({ route, navigation }) {
     const moves = [];
     for (let r = 0; r < 8; r++) {
       for (let c = 0; c < 8; c++) {
-        if (isValidChessMove(board, row, col, r, c)) {
-          moves.push(`${r}-${c}`);
-        }
+        if (isValidChessMove(board, row, col, r, c)) moves.push(`${r}-${c}`);
       }
     }
     setValidMoves(moves);
   };
 
-  const handleSquarePress = (row, col) => {
+  const handleSquarePress = async (row, col) => {
     if (isFinished) return;
+    if (mode === 'online' && turn !== myRole) return;
+
     const clickedPiece = board.at(row).at(col);
 
     if (clickedPiece && ((turn === 'white' && isWhite(clickedPiece)) || (turn === 'black' && isBlack(clickedPiece)))) {
@@ -152,111 +171,121 @@ export default function ChessGameScreen({ route, navigation }) {
       newBoard.at(row).splice(col, 1, movingPiece);
       newBoard.at(selected.row).splice(selected.col, 1, null);
 
+      const nextTurn = turn === 'white' ? 'black' : 'white';
       setBoard(newBoard);
       setSelected(null);
       setValidMoves([]);
+      setTurn(nextTurn);
 
-      if (targetPiece === '♚') return finishAndSave(player1);
-      if (targetPiece === '♔') return finishAndSave(player2);
+      if (targetPiece === '♚') return finishAndSave(player1, newBoard);
+      if (targetPiece === '♔') return finishAndSave(p2Name, newBoard);
 
-      setTurn(turn === 'white' ? 'black' : 'white');
+      if (mode === 'online' && roomId) {
+        await roomService.updateMove(roomId, newBoard, nextTurn);
+      }
     }
   };
 
+  const isMyTurnOnline = mode === 'local' || turn === myRole;
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.backArrow}>❮</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>♟️ Шахматы</Text>
-      </View>
-
-      <View style={styles.turnBanner}>
-        <Text style={styles.turnText}>Ход: {turn === 'white' ? `⚪ ${player1}` : `⚫ ${player2}`}</Text>
-      </View>
-
-      <View style={styles.boardFrame}>
-        <View style={styles.board}>
-          {board.map((rowArr, r) => (
-            <View key={r} style={styles.row}>
-              {rowArr.map((piece, c) => {
-                const isDark = (r + c) % 2 === 1;
-                const isSel = selected?.row === r && selected?.col === c;
-                const isHint = validMoves.includes(`${r}-${c}`);
-                const white = isWhite(piece);
-
-                return (
-                  <TouchableOpacity
-                    key={c}
-                    style={[
-                      styles.square,
-                      isDark ? styles.darkSquare : styles.lightSquare,
-                      isSel && styles.selectedSquare
-                    ]}
-                    onPress={() => handleSquarePress(r, c)}
-                    activeOpacity={0.85}
-                  >
-                    {isHint && !piece && <View style={styles.hintDot} />}
-                    {isHint && piece && <View style={styles.captureRing} />}
-                    
-                    {piece && (
-                      <Text style={[styles.pieceText, white ? styles.whitePieceText : styles.blackPieceText]}>
-                        {FILLED_GLYPHS[piece]}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      <View style={styles.innerWrapper}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Text style={styles.backArrow}>❮</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>♟️ Шахматы</Text>
+          {mode === 'online' && (
+            <View style={styles.codeBadge}>
+              <Text style={styles.codeText}>Код: {roomCode}</Text>
             </View>
-          ))}
+          )}
+        </View>
+
+        <View style={[styles.turnBanner, !isMyTurnOnline && { borderColor: '#F59E0B' }]}>
+          <Text style={styles.turnText}>
+            {mode === 'online' && !isMyTurnOnline
+              ? `⏳ Ожидание хода (${turn === 'white' ? player1 : p2Name})...`
+              : `Ход: ${turn === 'white' ? `⚪ ${player1}` : `⚫ ${p2Name}`}`}
+          </Text>
+        </View>
+
+        <View style={styles.boardFrame}>
+          <View style={[styles.board, { width: boardSize, height: boardSize }]}>
+            {board.map((rowArr, r) => (
+              <View key={r} style={styles.row}>
+                {rowArr.map((piece, c) => {
+                  const isDark = (r + c) % 2 === 1;
+                  const isSel = selected?.row === r && selected?.col === c;
+                  const isHint = validMoves.includes(`${r}-${c}`);
+                  const white = isWhite(piece);
+
+                  return (
+                    <TouchableOpacity
+                      key={c}
+                      style={[
+                        { width: squareSize, height: squareSize, alignItems: 'center', justifyContent: 'center' },
+                        isDark ? styles.darkSquare : styles.lightSquare,
+                        isSel && styles.selectedSquare
+                      ]}
+                      onPress={() => handleSquarePress(r, c)}
+                      activeOpacity={0.85}
+                    >
+                      {isHint && !piece && <View style={styles.hintDot} />}
+                      {isHint && piece && (
+                        <View style={[styles.captureRing, { width: squareSize - 4, height: squareSize - 4, borderRadius: squareSize / 2 }]} />
+                      )}
+                      {piece && (
+                        <Text style={[{ fontSize: squareSize * 0.74, includeFontPadding: false }, white ? styles.whitePieceText : styles.blackPieceText]}>
+                          {FILLED_GLYPHS[piece]}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.controls}>
+          <TouchableOpacity style={styles.winBtn1} onPress={() => finishAndSave(player1)}>
+            <Text style={styles.btnText}>🏆 Мат: {player1}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.winBtn2} onPress={() => finishAndSave(p2Name)}>
+            <Text style={styles.btnText}>🏆 Мат: {p2Name}</Text>
+          </TouchableOpacity>
         </View>
       </View>
-
-      <View style={styles.controls}>
-        <TouchableOpacity style={styles.winBtn1} onPress={() => finishAndSave(player1)}>
-          <Text style={styles.btnText}>🏆 Мат: {player1}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.winBtn2} onPress={() => finishAndSave(player2)}>
-          <Text style={styles.btnText}>🏆 Мат: {player2}</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1C1E22', paddingTop: 50, paddingHorizontal: 18 },
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
-  backButton: { backgroundColor: '#E5E7EB', width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  backArrow: { fontSize: 18, fontWeight: 'bold', color: '#000' },
-  headerTitle: { color: '#fff', fontSize: 24, fontWeight: 'bold', marginLeft: 16 },
-  turnBanner: { backgroundColor: '#262930', paddingVertical: 10, borderRadius: 12, alignItems: 'center', marginBottom: 16, borderWidth: 1, borderColor: '#6C47FF' },
-  turnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  boardFrame: { padding: 4, backgroundColor: '#2D3139', borderRadius: 12, alignSelf: 'center', marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 10, elevation: 10 },
-  board: { width: BOARD_SIZE, height: BOARD_SIZE, borderRadius: 8, overflow: 'hidden' },
-  row: { flexDirection: 'row' },
-  square: { width: SQUARE_SIZE, height: SQUARE_SIZE, alignItems: 'center', justifyContent: 'center' },
-  lightSquare: { backgroundColor: '#CBD5E1' },
-  darkSquare: { backgroundColor: '#475569' },
-  selectedSquare: { backgroundColor: '#7C3AED' },
-  hintDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: 'rgba(16, 185, 129, 0.9)', position: 'absolute', zIndex: 5 },
-  captureRing: { width: SQUARE_SIZE - 4, height: SQUARE_SIZE - 4, borderRadius: SQUARE_SIZE / 2, borderWidth: 3, borderColor: '#EF4444', position: 'absolute', zIndex: 5 },
-  pieceText: { fontSize: SQUARE_SIZE * 0.74, includeFontPadding: false },
-  whitePieceText: { 
-    color: '#FFFFFF', 
-    textShadowColor: '#0F172A', 
-    textShadowOffset: { width: 0, height: 1.5 }, 
-    textShadowRadius: 3 
-  },
-  blackPieceText: { 
-    color: '#0F172A',
-    textShadowColor: 'rgba(255, 255, 255, 0.35)', 
-    textShadowOffset: { width: 0, height: 1 }, 
-    textShadowRadius: 1.5 
-  },
-  controls: { gap: 10 },
-  winBtn1: { backgroundColor: '#6C47FF', paddingVertical: 13, borderRadius: 12, alignItems: 'center' },
-  winBtn2: { backgroundColor: '#10B981', paddingVertical: 13, borderRadius: 12, alignItems: 'center' },
-  btnText: { color: '#fff', fontSize: 15, fontWeight: 'bold' }
+  container: { flex: 1, backgroundColor: '#1C1E22' },
+  scrollContent: { paddingTop: 45, paddingBottom: 30, paddingHorizontal: 18, alignItems: 'center' },
+  innerWrapper: { width: '100%', maxWidth: 540 },
+header: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
+backButton: { backgroundColor: '#E5E7EB', width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+backArrow: { fontSize: 18, fontWeight: 'bold', color: '#000' },
+headerTitle: { color: '#fff', fontSize: 24, fontWeight: 'bold', marginLeft: 16, flex: 1 },
+codeBadge: { backgroundColor: '#6C47FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
+codeText: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
+turnBanner: { backgroundColor: '#262930', paddingVertical: 10, borderRadius: 12, alignItems: 'center', marginBottom: 16, borderWidth: 1.5, borderColor: '#6C47FF' },
+turnText: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
+boardFrame: { padding: 4, backgroundColor: '#2D3139', borderRadius: 12, alignSelf: 'center', marginBottom: 20, elevation: 8 },
+board: { borderRadius: 8, overflow: 'hidden' },
+row: { flexDirection: 'row' },
+lightSquare: { backgroundColor: '#CBD5E1' },
+darkSquare: { backgroundColor: '#475569' },
+selectedSquare: { backgroundColor: '#7C3AED' },
+hintDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: 'rgba(16, 185, 129, 0.9)', position: 'absolute', zIndex: 5 },
+captureRing: { borderWidth: 3, borderColor: '#EF4444', position: 'absolute', zIndex: 5 },
+whitePieceText: { color: '#FFFFFF', textShadowColor: '#0F172A', textShadowOffset: { width: 0, height: 1.5 }, textShadowRadius: 3 },
+blackPieceText: { color: '#0F172A', textShadowColor: 'rgba(255, 255, 255, 0.35)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 1.5 },
+controls: { gap: 10 },
+winBtn1: { backgroundColor: '#6C47FF', paddingVertical: 13, borderRadius: 12, alignItems: 'center' },
+winBtn2: { backgroundColor: '#10B981', paddingVertical: 13, borderRadius: 12, alignItems: 'center' },
+btnText: { color: '#fff', fontSize: 15, fontWeight: 'bold' }
 });
