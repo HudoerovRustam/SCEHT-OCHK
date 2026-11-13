@@ -16,6 +16,21 @@ const INITIAL_BOARD = [
   ['♖', '♘', '♗', '♕', '♔', '♗', '♘', '♖'],
 ];
 
+const FILLED_GLYPHS = {
+  '♙': '♟\uFE0E',
+  '♖': '♜\uFE0E',
+  '♘': '♞\uFE0E',
+  '♗': '♝\uFE0E',
+  '♕': '♛\uFE0E',
+  '♔': '♚\uFE0E',
+  '♟': '♟\uFE0E',
+  '♜': '♜\uFE0E',
+  '♞': '♞\uFE0E',
+  '♝': '♝\uFE0E',
+  '♛': '♛\uFE0E',
+  '♚': '♚\uFE0E',
+};
+
 const isWhite = (p) => ['♙', '♖', '♘', '♗', '♕', '♔'].includes(p);
 const isBlack = (p) => ['♟', '♜', '♞', '♝', '♛', '♚'].includes(p);
 
@@ -91,7 +106,7 @@ export default function ChessGameScreen({ route, navigation }) {
       if (store?.addGame) {
         await store.addGame({ title: 'Шахматы', winner: winnerName });
       }
-      Alert.alert('Партия завершена! 🏆', `Победитель: ${winnerName}\nСохранено в Supabase.`, [
+      Alert.alert('Партия завершена! 🏆', `Победитель: ${winnerName}`, [
         { text: 'ОК', onPress: () => navigation.goBack() }
       ]);
     } catch (e) {
@@ -186,11 +201,9 @@ export default function ChessGameScreen({ route, navigation }) {
                     {isHint && piece && <View style={styles.captureRing} />}
                     
                     {piece && (
-                      <View style={[styles.piecePedestal, white ? styles.whitePedestal : styles.blackPedestal]}>
-                        <Text style={[styles.pieceText, white ? styles.whitePieceText : styles.blackPieceText]}>
-                          {piece}
-                        </Text>
-                      </View>
+                      <Text style={[styles.pieceText, white ? styles.whitePieceText : styles.blackPieceText]}>
+                        {FILLED_GLYPHS[piece]}
+                      </Text>
                     )}
                   </TouchableOpacity>
                 );
@@ -220,7 +233,6 @@ const styles = StyleSheet.create({
   headerTitle: { color: '#fff', fontSize: 24, fontWeight: 'bold', marginLeft: 16 },
   turnBanner: { backgroundColor: '#262930', paddingVertical: 10, borderRadius: 12, alignItems: 'center', marginBottom: 16, borderWidth: 1, borderColor: '#6C47FF' },
   turnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  
   boardFrame: { padding: 4, backgroundColor: '#2D3139', borderRadius: 12, alignSelf: 'center', marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 10, elevation: 10 },
   board: { width: BOARD_SIZE, height: BOARD_SIZE, borderRadius: 8, overflow: 'hidden' },
   row: { flexDirection: 'row' },
@@ -228,29 +240,21 @@ const styles = StyleSheet.create({
   lightSquare: { backgroundColor: '#CBD5E1' },
   darkSquare: { backgroundColor: '#475569' },
   selectedSquare: { backgroundColor: '#7C3AED' },
-  
   hintDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: 'rgba(16, 185, 129, 0.9)', position: 'absolute', zIndex: 5 },
   captureRing: { width: SQUARE_SIZE - 4, height: SQUARE_SIZE - 4, borderRadius: SQUARE_SIZE / 2, borderWidth: 3, borderColor: '#EF4444', position: 'absolute', zIndex: 5 },
-  
-  piecePedestal: {
-    width: SQUARE_SIZE * 0.82,
-    height: SQUARE_SIZE * 0.82,
-    borderRadius: SQUARE_SIZE,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.45,
-    shadowRadius: 3,
-    elevation: 5,
+  pieceText: { fontSize: SQUARE_SIZE * 0.74, includeFontPadding: false },
+  whitePieceText: { 
+    color: '#FFFFFF', 
+    textShadowColor: '#0F172A', 
+    textShadowOffset: { width: 0, height: 1.5 }, 
+    textShadowRadius: 3 
   },
-  whitePedestal: { backgroundColor: '#F8FAFC', borderColor: '#94A3B8' },
-  blackPedestal: { backgroundColor: '#0F172A', borderColor: '#6366F1' },
-  pieceText: { fontSize: SQUARE_SIZE * 0.56, includeFontPadding: false },
-  whitePieceText: { color: '#1E293B' },
-  blackPieceText: { color: '#F8FAFC' },
-
+  blackPieceText: { 
+    color: '#0F172A',
+    textShadowColor: 'rgba(255, 255, 255, 0.35)', 
+    textShadowOffset: { width: 0, height: 1 }, 
+    textShadowRadius: 1.5 
+  },
   controls: { gap: 10 },
   winBtn1: { backgroundColor: '#6C47FF', paddingVertical: 13, borderRadius: 12, alignItems: 'center' },
   winBtn2: { backgroundColor: '#10B981', paddingVertical: 13, borderRadius: 12, alignItems: 'center' },

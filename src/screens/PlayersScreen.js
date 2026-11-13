@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
   playerInfo: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 10 },
   avatar: { fontSize: 24, marginRight: 15 },
   playerInputName: { color: '#ffffff', fontSize: 17, fontWeight: '500', flex: 1, paddingVertical: 4 },
-  deleteButton: { backgroundColor: '#ffffff', width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  deleteButton: { backgroundColor: '#262930', width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   deleteButtonText: { color: '#ffffff', fontSize: 12, fontWeight: 'bold' },
   startButton: { backgroundColor: '#6C47FF', paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginBottom: 30 },
   startButtonText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' }

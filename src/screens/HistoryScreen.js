@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
   gameTitle: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' },
   gameInfo: { color: '#A0A5B0', fontSize: 14, marginTop: 4 },
   ownerText: { color: '#10B981', fontSize: 12, fontWeight: '600', marginTop: 4 },
-  deleteBtn: { backgroundColor: '#EF4444', width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  deleteBtn: { backgroundColor: '#262930', width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   center: { flex: 1, backgroundColor: '#1C1E22', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
   loadingText: { color: '#ffffff', marginTop: 10, fontSize: 16 },
   errorIcon: { fontSize: 60, marginBottom: 15 },

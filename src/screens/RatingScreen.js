@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { StyleSheet, Text, View, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, ScrollView } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import NetInfo from '@react-native-community/netinfo';
 import { apiService } from '../services/api';
 
@@ -14,6 +15,13 @@ const CATEGORIES = [
 
 const BOARD_GAMES_NAMES = ['Шахматы', 'Шашки', 'Нарды', 'Крестики-нолики'];
 
+const GAME_ICONS = {
+  'Шахматы': '♟️',
+  'Шашки': '⚪',
+  'Нарды': '🎲',
+  'Крестики-нолики': '❌',
+};
+
 export default function RatingScreen() {
   const [allGames, setAllGames] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -24,7 +32,7 @@ export default function RatingScreen() {
 
   const loadRating = async (fromRefresh = false) => {
     if (fromRefresh) setIsRefreshing(true);
-    else setIsLoading(true);
+    else if (allGames.length === 0) setIsLoading(true);
     setServerError(null);
 
     try {
@@ -38,11 +46,6 @@ export default function RatingScreen() {
 
       setIsOnline(true);
 
-      if (!apiService || typeof apiService.getGames !== 'function') {
-        throw new Error('Сервис apiService не загружен. Проверьте файл api.js');
-      }
-
-      // Забираем все партии из Supabase
       const gamesFromCloud = await apiService.getGames();
       setAllGames(gamesFromCloud);
     } catch (error) {
@@ -53,44 +56,50 @@ export default function RatingScreen() {
     }
   };
 
-  useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener(state => {
-      setIsOnline(!!state.isConnected);
-      if (state.isConnected) {
-        loadRating(false);
-      }
-    });
+  useFocusEffect(
+    useCallback(() => {
+      loadRating(false);
+    }, [])
+  );
 
-    loadRating(false);
-    return () => unsubscribe();
-  }, []);
-
-  // Фильтрация игр и расчет рейтинга при смене вкладки
   const { leaderboard, filteredCount } = useMemo(() => {
     const filtered = allGames.filter((game) => {
       const title = (game.title || '').trim();
       if (selectedCategory === 'all') return true;
       if (selectedCategory === 'regular') {
-        // В "Просто игры" попадают все матчи, кроме 4 настольных игр
         return !BOARD_GAMES_NAMES.includes(title);
       }
       return title === selectedCategory;
     });
 
-    const winsMap = {};
+    const statsMap = {};
     filtered.forEach((game) => {
       const name = game.winner ? game.winner.trim() : '';
+      const gameTitle = game.title ? game.title.trim() : 'Игра';
+
       if (name && name !== 'Не определен' && name !== 'Ничья') {
-        winsMap[name] = (winsMap[name] || 0) + 1;
+        if (!statsMap[name]) {
+          statsMap[name] = { wins: 0, gamesSet: new Set() };
+        }
+        statsMap[name].wins += 1;
+        statsMap[name].gamesSet.add(gameTitle);
       }
     });
 
-    const sortedRating = Object.keys(winsMap)
-      .map((name) => ({
-        name,
-        wins: winsMap[name],
-        winRate: filtered.length > 0 ? Math.round((winsMap[name] / filtered.length) * 100) : 0
-      }))
+    const sortedRating = Object.keys(statsMap)
+      .map((name) => {
+        const { wins, gamesSet } = statsMap[name];
+        const gamesFormatted = Array.from(gamesSet)
+          .map((title) => `${GAME_ICONS[title] || '🎮'} ${title}`)
+          .join('  •  ');
+
+        return {
+          name,
+          wins,
+          gamesLabel: gamesFormatted,
+          winRate: filtered.length > 0 ? Math.round((wins / filtered.length) * 100) : 0
+        };
+      })
       .sort((a, b) => b.wins - a.wins);
 
     return { leaderboard: sortedRating, filteredCount: filtered.length };
@@ -133,7 +142,6 @@ export default function RatingScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Шапка со счетчиком игр в выбранной категории */}
       <View style={styles.headerRow}>
         <Text style={styles.headerTitle}>🏆 Рейтинг</Text>
         <View style={styles.badge}>
@@ -141,7 +149,6 @@ export default function RatingScreen() {
         </View>
       </View>
 
-      {/* Горизонтальная лента вкладок-категорий */}
       <View style={styles.tabsWrapper}>
         <ScrollView 
           horizontal 
@@ -165,7 +172,6 @@ export default function RatingScreen() {
         </ScrollView>
       </View>
 
-      {/* Список лидеров выбранной категории */}
       <FlatList
         data={leaderboard}
         keyExtractor={(item) => item.name}
@@ -177,7 +183,12 @@ export default function RatingScreen() {
             <View style={[styles.playerCard, isFirst && styles.firstPlaceCard]}>
               <View style={styles.leftInfo}>
                 <Text style={styles.rankText}>{medal}</Text>
-                <Text style={styles.playerName}>{item.name}</Text>
+                <View style={styles.nameColumn}>
+                  <Text style={styles.playerName}>{item.name}</Text>
+                  <Text style={styles.gamesPlayedText} numberOfLines={2}>
+                    {item.gamesLabel}
+                  </Text>
+                </View>
               </View>
               
               <View style={styles.rightStats}>
@@ -213,7 +224,6 @@ const styles = StyleSheet.create({
   badge: { backgroundColor: '#262930', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, borderWidth: 1, borderColor: '#6C47FF' },
   badgeText: { color: '#ffffff', fontSize: 14, fontWeight: 'bold' },
 
-  // Стили вкладок категорий
   tabsWrapper: { marginBottom: 18 },
   tabsContainer: { gap: 8, paddingRight: 10 },
   tabButton: { backgroundColor: '#262930', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: '#374151' },
@@ -221,12 +231,13 @@ const styles = StyleSheet.create({
   tabText: { color: '#A0A5B0', fontSize: 14, fontWeight: '600' },
   tabTextActive: { color: '#ffffff', fontWeight: 'bold' },
 
-  // Стили карточек игроков
-  playerCard: { flexDirection: 'row', backgroundColor: '#262930', borderRadius: 16, padding: 18, marginBottom: 12, justifyContent: 'space-between', alignItems: 'center' },
+  playerCard: { flexDirection: 'row', backgroundColor: '#262930', borderRadius: 16, padding: 16, marginBottom: 12, justifyContent: 'space-between', alignItems: 'center' },
   firstPlaceCard: { borderWidth: 1.5, borderColor: '#EAB308', backgroundColor: '#2A2823' },
   leftInfo: { flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 10 },
-  rankText: { fontSize: 24, marginRight: 14, color: '#A0A5B0', fontWeight: 'bold' },
+  rankText: { fontSize: 24, marginRight: 12, color: '#A0A5B0', fontWeight: 'bold' },
+  nameColumn: { flex: 1 },
   playerName: { color: '#ffffff', fontSize: 19, fontWeight: 'bold' },
+  gamesPlayedText: { color: '#A0A5B0', fontSize: 13, marginTop: 4, fontWeight: '500' },
   rightStats: { alignItems: 'flex-end' },
   winsText: { color: '#22C55E', fontSize: 18, fontWeight: 'bold' },
   winRateText: { color: '#A0A5B0', fontSize: 13, marginTop: 2 },

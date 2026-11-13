@@ -2,17 +2,14 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { useGameStore } from '../store/gameStore';
 
-// Начальная расстановка 24 пунктов классических коротких нард
 const createInitialPoints = () => {
   const pts = Array.from({ length: 24 }, () => ({ color: null, count: 0 }));
   
-  // Белые фишки (идут от 1 к 24)
   pts.splice(0, 1, { color: 'white', count: 2 });
   pts.splice(11, 1, { color: 'white', count: 5 });
   pts.splice(16, 1, { color: 'white', count: 3 });
   pts.splice(18, 1, { color: 'white', count: 5 });
 
-  // Чёрные фишки (идут от 24 к 1)
   pts.splice(23, 1, { color: 'black', count: 2 });
   pts.splice(12, 1, { color: 'black', count: 5 });
   pts.splice(7, 1, { color: 'black', count: 3 });
@@ -21,8 +18,8 @@ const createInitialPoints = () => {
   return pts;
 };
 
-const TOP_ROW_INDICES = Array.from({ length: 12 }, (_, i) => i + 12); // Пункты 13 - 24
-const BOTTOM_ROW_INDICES = Array.from({ length: 12 }, (_, i) => 11 - i); // Пункты 12 - 1
+const TOP_ROW_INDICES = Array.from({ length: 12 }, (_, i) => i + 12);
+const BOTTOM_ROW_INDICES = Array.from({ length: 12 }, (_, i) => 11 - i);
 
 export default function BackgammonGameScreen({ route, navigation }) {
   const store = useGameStore();
@@ -39,7 +36,7 @@ export default function BackgammonGameScreen({ route, navigation }) {
       if (store && typeof store.addGame === 'function') {
         await store.addGame({ title: 'Нарды', winner: winnerName });
       }
-      Alert.alert('Победа в нардах! 🏆', `Победитель: ${winnerName}\nСохранено в Supabase.`, [
+      Alert.alert('Победа в нардах! 🏆', `Победитель: ${winnerName}`, [
         { text: 'ОК', onPress: () => navigation.goBack() }
       ]);
     } catch (e) {
@@ -88,7 +85,6 @@ export default function BackgammonGameScreen({ route, navigation }) {
       sourcePt.count -= 1;
       if (sourcePt.count === 0) sourcePt.color = null;
 
-      // Сбиваем одиночную фишку соперника на старт
       if (targetPt.color && targetPt.color !== turn && targetPt.count === 1) {
         const startIdx = targetPt.color === 'white' ? 0 : 23;
         const startPt = newPoints.at(startIdx);

@@ -38,7 +38,7 @@ export default function CheckersGameScreen({ route, navigation }) {
       if (store?.addGame) {
         await store.addGame({ title: 'Шашки', winner: winnerName });
       }
-      Alert.alert('Победа в шашках! 🏆', `Победитель: ${winnerName}\nСохранено в Supabase.`, [
+      Alert.alert('Победа в шашках! 🏆', `Победитель: ${winnerName}`, [
         { text: 'ОК', onPress: () => navigation.goBack() }
       ]);
     } catch (e) {
@@ -187,7 +187,6 @@ const styles = StyleSheet.create({
   headerTitle: { color: '#fff', fontSize: 24, fontWeight: 'bold', marginLeft: 16 },
   turnBanner: { backgroundColor: '#262930', paddingVertical: 10, borderRadius: 12, alignItems: 'center', marginBottom: 16, borderWidth: 1, borderColor: '#6C47FF' },
   turnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  
   boardFrame: { padding: 4, backgroundColor: '#2D3139', borderRadius: 12, alignSelf: 'center', marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 10, elevation: 10 },
   board: { width: BOARD_SIZE, height: BOARD_SIZE, borderRadius: 8, overflow: 'hidden' },
   row: { flexDirection: 'row' },
@@ -196,7 +195,6 @@ const styles = StyleSheet.create({
   darkSquare: { backgroundColor: '#475569' },
   selectedSquare: { backgroundColor: '#7C3AED' },
   hintDot: { width: 15, height: 15, borderRadius: 8, backgroundColor: '#10B981' },
-  
   checkerOuter: {
     width: SQUARE_SIZE * 0.8,
     height: SQUARE_SIZE * 0.8,
@@ -211,7 +209,6 @@ const styles = StyleSheet.create({
   },
   whiteCheckerOuter: { backgroundColor: '#F8FAFC', borderWidth: 2, borderColor: '#94A3B8' },
   blackCheckerOuter: { backgroundColor: '#0F172A', borderWidth: 2, borderColor: '#6366F1' },
-  
   checkerInner: {
     width: SQUARE_SIZE * 0.56,
     height: SQUARE_SIZE * 0.56,
@@ -223,7 +220,6 @@ const styles = StyleSheet.create({
   whiteCheckerInner: { borderColor: '#CBD5E1', backgroundColor: '#F1F5F9' },
   blackCheckerInner: { borderColor: '#334155', backgroundColor: '#1E293B' },
   kingCrown: { fontSize: 14 },
-
   controls: { gap: 10 },
   winBtn1: { backgroundColor: '#6C47FF', paddingVertical: 13, borderRadius: 12, alignItems: 'center' },
   winBtn2: { backgroundColor: '#10B981', paddingVertical: 13, borderRadius: 12, alignItems: 'center' },
